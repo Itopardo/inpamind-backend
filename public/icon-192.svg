@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0C1A3A"/>
+      <stop offset="100%" style="stop-color:#1A2E57"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+  <text x="96" y="86" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="28" fill="#FFFFFF" letter-spacing="3">INPA</text>
+  <text x="96" y="116" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="28" fill="#41C6F6" letter-spacing="3">MIND</text>
+  <text x="96" y="140" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.5)" letter-spacing="2">VISITAS TÉCNICAS</text>
+</svg>

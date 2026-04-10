@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80">
+  <!-- IH Icon -->
+  <g transform="translate(0,0)">
+    <!-- Outer frame -->
+    <rect x="2" y="2" width="76" height="76" rx="12" fill="none" stroke="#41C6F6" stroke-width="3"/>
+    <!-- Left vertical bar of I/H -->
+    <rect x="16" y="14" width="12" height="52" rx="2" fill="#FFFFFF"/>
+    <!-- Right vertical bar of H -->
+    <rect x="52" y="14" width="12" height="52" rx="2" fill="#41C6F6"/>
+    <!-- Horizontal bar of H -->
+    <rect x="28" y="32" width="24" height="10" rx="2" fill="#FFFFFF"/>
+    <!-- Chimney/industrial top element -->
+    <rect x="52" y="8" width="12" height="12" rx="2" fill="#41C6F6"/>
+    <rect x="40" y="14" width="8" height="6" rx="1" fill="#41C6F6" opacity="0.6"/>
+  </g>
+  <!-- INPAMIND text -->
+  <text x="96" y="42" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="32" fill="#FFFFFF" letter-spacing="3">INPAMIND</text>
+  <!-- Subtitle -->
+  <text x="96" y="62" font-family="Arial,Helvetica,sans-serif" font-weight="400" font-size="9" fill="rgba(255,255,255,0.5)" letter-spacing="2.5">INSUMOS PARA LA MINERÍA E INDUSTRIA</text>
+</svg>
