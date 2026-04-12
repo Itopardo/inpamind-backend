@@ -1,4 +1,4 @@
-// ── INPAMIND App — Frontend Logic ──
+// ── INPAMIND App — Frontend Logic v2 ──
 const API = window.location.origin;
 let token = localStorage.getItem('inpamind_token');
 let currentUser = null;
@@ -7,6 +7,18 @@ let newPhotoData = null;
 let editPhotoData = null;
 let editPhotoChanged = false;
 let navHistory = [];
+let vendedorChart = null;
+let adminDailyChart = null;
+let adminMonthlyChart = null;
+let adminSellerChart = null;
+
+// ── Chart.js Global Config ──
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.color = 'rgba(255,255,255,.5)';
+  Chart.defaults.borderColor = 'rgba(255,255,255,.06)';
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+  Chart.defaults.font.size = 11;
+}
 
 // ── API Helper ──
 async function api(path, opts = {}) {
@@ -26,7 +38,13 @@ async function api(path, opts = {}) {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+    // Re-trigger animation
+    el.style.animation = 'none';
+    el.offsetHeight; // force reflow
+    el.style.animation = '';
+  }
 }
 function goBack() {
   if (navHistory.length > 0) showScreen(navHistory.pop());
@@ -86,25 +104,213 @@ function doLogout() {
 function enterApp() {
   document.getElementById('welcomeName').textContent = currentUser.name;
   document.getElementById('footerName').textContent = currentUser.name;
+  // Set avatar initials
+  const initials = currentUser.name.split(' ').map(w => w[0]).join('').substring(0, 2);
+  document.getElementById('homeAvatar').textContent = initials;
+  // Admin avatar amber
+  if (currentUser.role === 'admin') {
+    document.getElementById('homeAvatar').style.background = 'linear-gradient(135deg, #E8A020, #F0C060)';
+  }
   initTabs();
   initNewForm();
+  renderHomeDashboard();
   if (currentUser.role === 'admin') {
-    switchTab(3);
-    loadAdminStats();
+    switchTab(0);
   } else {
     switchTab(0);
   }
 }
 
+// ── Home Dashboard ──
+function renderHomeDashboard() {
+  const container = document.getElementById('home-dashboard');
+  if (currentUser.role === 'admin') {
+    container.innerHTML = `
+      <div class="stat-grid" style="margin:0 0 14px">
+        <div class="stat-card shimmer"><div class="stat-num">—</div><div class="stat-lbl">Total Visitas</div></div>
+        <div class="stat-card shimmer"><div class="stat-num">—</div><div class="stat-lbl">Vendedores Activos</div></div>
+        <div class="stat-card amber shimmer"><div class="stat-num">—</div><div class="stat-lbl">Visitas del Mes</div></div>
+        <div class="stat-card shimmer"><div class="stat-num">—</div><div class="stat-lbl">Con Foto</div></div>
+      </div>
+      <div class="card" style="margin-bottom:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <ion-icon name="trending-up" style="font-size:16px;color:var(--cyan)"></ion-icon>
+          <span style="font-size:13px;font-weight:700;letter-spacing:.5px">Visitas Últimos 7 Días</span>
+        </div>
+        <div style="height:170px;position:relative"><canvas id="homeDailyChart"></canvas></div>
+      </div>
+      <div class="card" style="margin-bottom:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <ion-icon name="stats-chart" style="font-size:16px;color:var(--amber)"></ion-icon>
+          <span style="font-size:13px;font-weight:700;letter-spacing:.5px">Tendencia Mensual</span>
+        </div>
+        <div style="height:170px;position:relative"><canvas id="homeMonthlyChart"></canvas></div>
+      </div>
+      <div class="card" style="margin-bottom:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <ion-icon name="people" style="font-size:16px;color:var(--cyan)"></ion-icon>
+          <span style="font-size:13px;font-weight:700;letter-spacing:.5px">Visitas por Vendedor</span>
+        </div>
+        <div style="height:200px;position:relative"><canvas id="homeSellerChart"></canvas></div>
+      </div>
+      <button class="btn-glass" onclick="switchTab(1)" style="margin-bottom:0"><ion-icon name="list-outline" style="font-size:20px"></ion-icon>VER HISTORIAL COMPLETO</button>
+    `;
+    loadAdminHomeDashboard();
+  } else {
+    container.innerHTML = `
+      <div class="stat-grid" style="margin:0 0 14px">
+        <div class="stat-card shimmer"><div class="stat-num">—</div><div class="stat-lbl">Hoy</div></div>
+        <div class="stat-card shimmer"><div class="stat-num">—</div><div class="stat-lbl">Este Mes</div></div>
+        <div class="stat-card amber shimmer"><div class="stat-num">—</div><div class="stat-lbl">Total</div></div>
+        <div class="stat-card shimmer"><div class="stat-num">—</div><div class="stat-lbl">Clientes</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px;padding:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <ion-icon name="bar-chart" style="font-size:16px;color:var(--cyan)"></ion-icon>
+          <span style="font-size:13px;font-weight:700;letter-spacing:.5px">Actividad Semanal</span>
+        </div>
+        <div style="height:160px;position:relative"><canvas id="vendedorChart"></canvas></div>
+      </div>
+      <button class="btn-cyan" style="margin-bottom:12px" onclick="switchTab(1)"><ion-icon name="add-circle-outline" style="font-size:22px"></ion-icon>NUEVA VISITA</button>
+      <button class="btn-glass" onclick="switchTab(2)"><ion-icon name="time-outline" style="font-size:20px"></ion-icon>HISTORIAL DE VISITAS</button>
+    `;
+    loadVendedorStats();
+  }
+}
+
+// ── Admin Home Dashboard ──
+let homeDailyChart = null, homeMonthlyChart = null, homeSellerChart = null;
+
+async function loadAdminHomeDashboard() {
+  try {
+    const data = await api('/api/admin/stats');
+
+    // Update stat cards
+    const statCards = document.querySelectorAll('#home-dashboard .stat-card');
+    if (statCards.length >= 4) {
+      statCards[0].innerHTML = `<div class="stat-num">${data.totalVisits}</div><div class="stat-lbl">Total Visitas</div>`;
+      statCards[0].classList.remove('shimmer');
+      statCards[1].innerHTML = `<div class="stat-num">${data.activeSellers}</div><div class="stat-lbl">Vendedores Activos</div>`;
+      statCards[1].classList.remove('shimmer');
+      statCards[2].innerHTML = `<div class="stat-num">${data.monthVisits}</div><div class="stat-lbl">Visitas del Mes</div>`;
+      statCards[2].classList.remove('shimmer');
+      statCards[3].innerHTML = `<div class="stat-num">${data.withPhoto}</div><div class="stat-lbl">Con Foto</div>`;
+      statCards[3].classList.remove('shimmer');
+    }
+
+    // Daily chart
+    const dailyCtx = document.getElementById('homeDailyChart');
+    if (dailyCtx && data.dailyData) {
+      if (homeDailyChart) homeDailyChart.destroy();
+      const gradient = dailyCtx.getContext('2d').createLinearGradient(0, 0, 0, 170);
+      gradient.addColorStop(0, 'rgba(65,198,246,.4)');
+      gradient.addColorStop(1, 'rgba(65,198,246,.02)');
+      homeDailyChart = new Chart(dailyCtx, {
+        type: 'line',
+        data: { labels: data.dailyData.map(d => d.label), datasets: [{ data: data.dailyData.map(d => d.count), borderColor: '#41C6F6', borderWidth: 2.5, backgroundColor: gradient, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#41C6F6', pointBorderColor: '#0C1A3A', pointBorderWidth: 2, pointHoverRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(12,26,58,.95)', titleColor: '#fff', bodyColor: '#41C6F6', borderColor: 'rgba(65,198,246,.3)', borderWidth: 1, cornerRadius: 10, padding: 10, callbacks: { label: (ctx) => `${ctx.raw} visita${ctx.raw !== 1 ? 's' : ''}` } } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,.04)' } }, x: { grid: { display: false } } }, animation: { duration: 1000, easing: 'easeOutQuart' } }
+      });
+    }
+
+    // Monthly chart
+    const monthlyCtx = document.getElementById('homeMonthlyChart');
+    if (monthlyCtx && data.monthlyData) {
+      if (homeMonthlyChart) homeMonthlyChart.destroy();
+      homeMonthlyChart = new Chart(monthlyCtx, {
+        type: 'bar',
+        data: { labels: data.monthlyData.map(d => d.label), datasets: [{ data: data.monthlyData.map(d => d.count), backgroundColor: data.monthlyData.map((_, i) => i === data.monthlyData.length - 1 ? 'rgba(232,160,32,.8)' : 'rgba(232,160,32,.35)'), borderColor: 'rgba(232,160,32,.6)', borderWidth: 1, borderRadius: 8, borderSkipped: false }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(12,26,58,.95)', titleColor: '#fff', bodyColor: '#E8A020', borderColor: 'rgba(232,160,32,.3)', borderWidth: 1, cornerRadius: 10, padding: 10, callbacks: { label: (ctx) => `${ctx.raw} visita${ctx.raw !== 1 ? 's' : ''}` } } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,.04)' } }, x: { grid: { display: false } } }, animation: { duration: 1000, easing: 'easeOutQuart' } }
+      });
+    }
+
+    // Seller chart
+    const sellerCtx = document.getElementById('homeSellerChart');
+    if (sellerCtx && data.perSeller && data.perSeller.length > 0) {
+      if (homeSellerChart) homeSellerChart.destroy();
+      const sellers = data.perSeller.slice(0, 8);
+      const colors = ['#41C6F6', '#3EB2F5', '#0FC2E5', '#2ED573', '#E8A020', '#F0C060', '#FF6B6B', '#A78BFA'];
+      homeSellerChart = new Chart(sellerCtx, {
+        type: 'bar',
+        data: { labels: sellers.map(s => s.name.split(' ')[0]), datasets: [{ data: sellers.map(s => s.visit_count), backgroundColor: sellers.map((_, i) => colors[i % colors.length] + '66'), borderColor: sellers.map((_, i) => colors[i % colors.length]), borderWidth: 1, borderRadius: 6, borderSkipped: false }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(12,26,58,.95)', titleColor: '#fff', bodyColor: '#41C6F6', borderColor: 'rgba(65,198,246,.3)', borderWidth: 1, cornerRadius: 10, padding: 10, callbacks: { title: (items) => sellers[items[0].dataIndex]?.name || '', label: (ctx) => `${ctx.raw} visita${ctx.raw !== 1 ? 's' : ''}` } } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,.04)' } }, y: { grid: { display: false } } }, animation: { duration: 1000, easing: 'easeOutQuart' } }
+      });
+    }
+  } catch (e) { console.error('Admin dashboard error:', e); }
+}
+
+// ── Vendedor Dashboard ──
+async function loadVendedorStats() {
+  try {
+    const data = await api('/api/visits/stats/me');
+
+    // Update stat cards
+    const statCards = document.querySelectorAll('#home-dashboard .stat-card');
+    if (statCards.length >= 4) {
+      statCards[0].innerHTML = `<div class="stat-num">${data.todayVisits}</div><div class="stat-lbl">Hoy</div>`;
+      statCards[0].classList.remove('shimmer');
+      statCards[1].innerHTML = `<div class="stat-num">${data.monthVisits}</div><div class="stat-lbl">Este Mes</div>`;
+      statCards[1].classList.remove('shimmer');
+      statCards[2].innerHTML = `<div class="stat-num">${data.total}</div><div class="stat-lbl">Total</div>`;
+      statCards[2].classList.remove('shimmer');
+      statCards[3].innerHTML = `<div class="stat-num">${data.uniqueClients}</div><div class="stat-lbl">Clientes</div>`;
+      statCards[3].classList.remove('shimmer');
+    }
+
+    // Weekly chart
+    renderVendedorChart(data.dailyData);
+  } catch (e) { console.error('Stats error:', e); }
+}
+
+function renderVendedorChart(dailyData) {
+  const ctx = document.getElementById('vendedorChart');
+  if (!ctx) return;
+  if (vendedorChart) vendedorChart.destroy();
+
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 160);
+  gradient.addColorStop(0, 'rgba(65,198,246,.35)');
+  gradient.addColorStop(1, 'rgba(65,198,246,.02)');
+
+  vendedorChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dailyData.map(d => d.label),
+      datasets: [{
+        data: dailyData.map(d => d.count),
+        backgroundColor: dailyData.map((d, i) => i === dailyData.length - 1 ? 'rgba(65,198,246,.8)' : 'rgba(65,198,246,.35)'),
+        borderColor: 'rgba(65,198,246,.6)',
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: 'rgba(12,26,58,.95)', titleColor: '#fff', bodyColor: '#41C6F6',
+        borderColor: 'rgba(65,198,246,.3)', borderWidth: 1, cornerRadius: 10, padding: 10,
+        callbacks: { label: (ctx) => `${ctx.raw} visita${ctx.raw !== 1 ? 's' : ''}` }
+      }},
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, color: 'rgba(255,255,255,.3)' }, grid: { color: 'rgba(255,255,255,.04)' } },
+               x: { ticks: { color: 'rgba(255,255,255,.4)' }, grid: { display: false } } },
+      animation: { duration: 800, easing: 'easeOutQuart' }
+    }
+  });
+}
+
 // ── Tabs ──
 function initTabs() {
-  const baseTabs = [
+  const vendedorTabs = [
     { icon: 'home', label: 'Inicio', screen: 's-home' },
     { icon: 'add-circle', label: 'Nueva', screen: 's-nueva' },
     { icon: 'list', label: 'Historial', screen: 's-hist' }
   ];
-  const adminTab = { icon: 'shield-checkmark', label: 'Admin', screen: 's-admin' };
-  const tabs = currentUser?.role === 'admin' ? [...baseTabs, adminTab] : baseTabs;
+  const adminTabs = [
+    { icon: 'home', label: 'Inicio', screen: 's-home' },
+    { icon: 'list', label: 'Historial', screen: 's-hist' },
+    { icon: 'shield-checkmark', label: 'Admin', screen: 's-admin' }
+  ];
+  const tabs = currentUser?.role === 'admin' ? adminTabs : vendedorTabs;
   const ids = ['tabBar', 'tabBar2', 'tabBar3', 'tabBar4'];
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -114,8 +320,9 @@ function initTabs() {
 }
 
 function switchTab(i) {
-  const baseSc = ['s-home', 's-nueva', 's-hist'];
-  const screens = currentUser?.role === 'admin' ? [...baseSc, 's-admin'] : baseSc;
+  const vendedorSc = ['s-home', 's-nueva', 's-hist'];
+  const adminSc = ['s-home', 's-hist', 's-admin'];
+  const screens = currentUser?.role === 'admin' ? adminSc : vendedorSc;
   if (i >= screens.length) return;
   showScreen(screens[i]);
   navHistory = [];
@@ -124,99 +331,377 @@ function switchTab(i) {
   });
   if (screens[i] === 's-hist') renderHistory();
   if (screens[i] === 's-nueva') initNewForm();
+  if (screens[i] === 's-home') {
+    if (currentUser?.role === 'admin') loadAdminHomeDashboard();
+    else loadVendedorStats();
+  }
   if (screens[i] === 's-admin') { loadAdminStats(); loadAdminVisits(); }
 }
 
 // ── New Visit Form ──
-function initNewForm() {
+let fotoIngresoData = null;
+let fotoAdicionalData = null;
+let knownClients = [];
+let knownContacts = [];
+
+async function initNewForm() {
   const now = new Date();
   document.getElementById('n-fecha').value = now.toISOString().split('T')[0];
-  document.getElementById('n-hora').value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('n-hora-ingreso').value = timeStr;
+  
   document.getElementById('n-cliente').value = '';
+  document.getElementById('n-hora-salida').value = '';
   document.getElementById('n-dir').value = '';
   document.getElementById('n-contacto').value = '';
+  document.getElementById('n-cargo').value = '';
+  document.getElementById('n-telefono').value = '';
+  document.getElementById('n-mail').value = '';
   document.getElementById('n-desc').value = '';
-  removeNewPhoto();
+  
+  removeFoto('ingreso');
+  removeFoto('adicional');
+
+  const cListEl = document.getElementById('n-cliente-list');
+  if (cListEl) cListEl.style.display = 'none';
+  const pListEl = document.getElementById('n-contacto-list');
+  if (pListEl) pListEl.style.display = 'none';
+
+  // Load unique clients & contacts from past visits asynchronously
+  try {
+    const data = await api('/api/visits');
+    const visits = data.visits || [];
+    const cmap = {};
+    const pmap = {};
+    for (let i = visits.length - 1; i >= 0; i--) {
+      const v = visits[i];
+      if (v.cliente && !cmap[v.cliente]) {
+        cmap[v.cliente] = {
+          cliente: v.cliente, direccion: v.direccion || '', contacto: v.contacto || '',
+          cargo: v.cargo || '', telefono: v.telefono || '', mail: v.mail || ''
+        };
+      }
+      if (v.contacto && !pmap[v.contacto]) {
+        pmap[v.contacto] = {
+          contacto: v.contacto, cargo: v.cargo || '',
+          telefono: v.telefono || '', mail: v.mail || ''
+        };
+      }
+    }
+    knownClients = Object.values(cmap);
+    knownContacts = Object.values(pmap);
+  } catch(e) {}
 }
 
-function handleNewPhoto(e) {
+// -- Client Autocomplete --
+function handleClientSearch() {
+  const q = document.getElementById('n-cliente').value.toLowerCase();
+  const listEl = document.getElementById('n-cliente-list');
+  if (!q) { listEl.style.display = 'none'; return; }
+  
+  const matches = knownClients.filter(c => c.cliente.toLowerCase().includes(q));
+  if (!matches.length) {
+    listEl.style.display = 'none'; 
+    return;
+  }
+  
+  listEl.innerHTML = matches.map(c => `
+    <div class="ac-item" onclick="selectClient('${esc(c.cliente)}')">
+      <ion-icon name="business"></ion-icon> <div>${esc(c.cliente)}</div>
+    </div>
+  `).join('');
+  listEl.style.display = 'flex';
+}
+
+function toggleClientList() {
+  const listEl = document.getElementById('n-cliente-list');
+  if (listEl.style.display === 'flex') {
+    listEl.style.display = 'none';
+  } else {
+    if (!knownClients.length) return;
+    listEl.innerHTML = knownClients.map(c => `
+      <div class="ac-item" onclick="selectClient('${esc(c.cliente)}')">
+        <ion-icon name="business"></ion-icon> <div>${esc(c.cliente)}</div>
+      </div>
+    `).join('');
+    listEl.style.display = 'flex';
+  }
+}
+
+function selectClient(name) {
+  const c = knownClients.find(x => x.cliente === name);
+  if (c) {
+    document.getElementById('n-cliente').value = c.cliente;
+    document.getElementById('n-dir').value = c.direccion;
+    document.getElementById('n-contacto').value = c.contacto;
+    document.getElementById('n-cargo').value = c.cargo;
+    document.getElementById('n-telefono').value = c.telefono;
+    document.getElementById('n-mail').value = c.mail;
+  }
+  const listEl = document.getElementById('n-cliente-list');
+  if (listEl) listEl.style.display = 'none';
+}
+
+// -- Contact Autocomplete --
+function handleContactSearch() {
+  const q = document.getElementById('n-contacto').value.toLowerCase();
+  const listEl = document.getElementById('n-contacto-list');
+  if (!q) { listEl.style.display = 'none'; return; }
+  
+  const matches = knownContacts.filter(c => c.contacto.toLowerCase().includes(q));
+  if (!matches.length) {
+    listEl.style.display = 'none'; 
+    return;
+  }
+  
+  listEl.innerHTML = matches.map(c => `
+    <div class="ac-item" onclick="selectContact('${esc(c.contacto)}')">
+      <ion-icon name="person"></ion-icon> <div>${esc(c.contacto)}</div>
+    </div>
+  `).join('');
+  listEl.style.display = 'flex';
+}
+
+function toggleContactList() {
+  const listEl = document.getElementById('n-contacto-list');
+  if (listEl.style.display === 'flex') {
+    listEl.style.display = 'none';
+  } else {
+    if (!knownContacts.length) return;
+    listEl.innerHTML = knownContacts.map(c => `
+      <div class="ac-item" onclick="selectContact('${esc(c.contacto)}')">
+        <ion-icon name="person"></ion-icon> <div>${esc(c.contacto)}</div>
+      </div>
+    `).join('');
+    listEl.style.display = 'flex';
+  }
+}
+
+function selectContact(name) {
+  const c = knownContacts.find(x => x.contacto === name);
+  if (c) {
+    document.getElementById('n-contacto').value = c.contacto;
+    document.getElementById('n-cargo').value = c.cargo;
+    document.getElementById('n-telefono').value = c.telefono;
+    document.getElementById('n-mail').value = c.mail;
+  }
+  const listEl = document.getElementById('n-contacto-list');
+  if (listEl) listEl.style.display = 'none';
+}
+
+// Close dropdowns if clicked outside
+document.addEventListener('click', (e) => {
+  const cWrap = e.target.closest('#n-cliente-wrap');
+  if (!cWrap) {
+    const listEl = document.getElementById('n-cliente-list');
+    if (listEl) listEl.style.display = 'none';
+  }
+  const pWrap = e.target.closest('#n-contacto-wrap');
+  if (!pWrap) {
+    const listEl = document.getElementById('n-contacto-list');
+    if (listEl) listEl.style.display = 'none';
+  }
+});
+
+function handleFoto(type, e) {
   const f = e.target.files[0]; if (!f) return;
   compressImage(f, (dataUrl) => {
-    newPhotoData = dataUrl;
-    document.getElementById('n-photo-img').src = newPhotoData;
-    document.getElementById('n-photo-preview').style.display = 'block';
-    document.getElementById('n-photo-btns').style.display = 'none';
+    if (type === 'ingreso') {
+      fotoIngresoData = dataUrl;
+      document.getElementById('img-ingreso').src = fotoIngresoData;
+      document.getElementById('preview-ingreso').style.display = 'block';
+      document.getElementById('btn-foto-ingreso').style.display = 'none';
+    } else {
+      fotoAdicionalData = dataUrl;
+      document.getElementById('img-adicional').src = fotoAdicionalData;
+      document.getElementById('preview-adicional').style.display = 'block';
+      document.getElementById('btn-foto-adicional').style.display = 'none';
+    }
   });
 }
 
-function removeNewPhoto() {
-  newPhotoData = null;
-  document.getElementById('n-photo-preview').style.display = 'none';
-  document.getElementById('n-photo-btns').style.display = 'flex';
+function removeFoto(type) {
+  if (type === 'ingreso') {
+    fotoIngresoData = null;
+    document.getElementById('preview-ingreso').style.display = 'none';
+    document.getElementById('btn-foto-ingreso').style.display = 'flex';
+  } else {
+    fotoAdicionalData = null;
+    document.getElementById('preview-adicional').style.display = 'none';
+    document.getElementById('btn-foto-adicional').style.display = 'flex';
+  }
 }
 
 async function saveNewVisit() {
   const cliente = document.getElementById('n-cliente').value.trim();
   const dir = document.getElementById('n-dir').value.trim();
+  const hSalida = document.getElementById('n-hora-salida').value.trim();
+  const contacto = document.getElementById('n-contacto').value.trim();
+  const cargo = document.getElementById('n-cargo').value.trim();
+
+  // Validations (*)
   if (!cliente) return toast('El campo Cliente es obligatorio', 'err');
+  if (!hSalida) return toast('La Hora de Salida es obligatoria', 'err');
   if (!dir) return toast('El campo Dirección es obligatorio', 'err');
+  if (!contacto) return toast('El Contacto es obligatorio', 'err');
+  if (!cargo) return toast('El Cargo es obligatorio', 'err');
+  if (!fotoIngresoData) return toast('La Foto de Ingreso es obligatoria', 'err');
+
   const btn = document.getElementById('btnSaveNew');
   btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px"></div> Guardando...';
+  btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin-right:6px"></div> Guardando...';
   try {
     const body = {
       fecha: document.getElementById('n-fecha').value,
-      hora: document.getElementById('n-hora').value,
-      cliente, direccion: dir,
-      contacto: document.getElementById('n-contacto').value.trim(),
+      hora: document.getElementById('n-hora-ingreso').value, // Legacy field binding
+      hora_salida: hSalida,
+      cliente, 
+      direccion: dir,
+      contacto,
+      cargo,
+      telefono: document.getElementById('n-telefono').value.trim(),
+      mail: document.getElementById('n-mail').value.trim(),
       descripcion: document.getElementById('n-desc').value.trim()
     };
-    if (newPhotoData) body.foto_base64 = newPhotoData;
+    if (fotoIngresoData) body.foto_base64 = fotoIngresoData;
+    if (fotoAdicionalData) body.foto_adicional_base64 = fotoAdicionalData;
+
     await api('/api/visits', { method: 'POST', body });
     toast('✓ Visita guardada correctamente', 'ok');
+    
+    // Reset and immediately redirect to History
     initNewForm();
+    switchTab(2); 
+
   } catch (e) {
     toast(e.message, 'err');
   }
   btn.disabled = false;
-  btn.innerHTML = '<ion-icon name="cloud-upload-outline" style="font-size:20px"></ion-icon>GUARDAR VISITA';
+  btn.innerHTML = '<ion-icon name="checkmark-circle-outline" style="font-size:20px;margin-right:6px"></ion-icon>GUARDAR VISITA';
 }
 
 // ── History ──
+let histGroupMode = 'client';
+
+function setHistGroup(mode) {
+  histGroupMode = mode;
+  document.querySelectorAll('.hist-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.group === mode);
+  });
+  renderHistory();
+}
+
 async function renderHistory() {
   const search = document.getElementById('h-search').value || '';
+  const isAdmin = currentUser?.role === 'admin';
+
   try {
-    const data = await api(`/api/visits?search=${encodeURIComponent(search)}`);
-    const visits = data.visits || [];
+    let visits;
+    if (isAdmin) {
+      const data = await api(`/api/admin/visits?search=${encodeURIComponent(search)}`);
+      visits = data.visits || [];
+    } else {
+      const data = await api(`/api/visits?search=${encodeURIComponent(search)}`);
+      visits = data.visits || [];
+    }
+
     const clients = new Set(visits.map(v => v.cliente));
-    document.getElementById('st-total').textContent = visits.length + ' visitas';
-    document.getElementById('st-clients').textContent = clients.size + ' clientes';
+    const monthsSet = new Set(visits.map(v => {
+      const d = v.fecha ? new Date(v.fecha + 'T00:00:00') : new Date(v.created_at);
+      return `${d.getFullYear()}-${d.getMonth()}`;
+    }));
+    
+    document.getElementById('st-total').textContent = visits.length;
+    document.getElementById('st-clients').textContent = clients.size;
+    document.getElementById('st-months').textContent = monthsSet.size;
+
     const el = document.getElementById('h-list');
     if (!visits.length) {
-      el.innerHTML = '<div class="empty"><ion-icon name="file-tray-outline"></ion-icon><p>No hay visitas registradas</p><p style="font-size:12px;margin-top:8px">Crea tu primera visita con el botón +</p></div>';
+      el.innerHTML = '<div class="empty"><ion-icon name="file-tray-outline"></ion-icon><p>No hay visitas registradas</p></div>';
       return;
     }
-    el.innerHTML = visits.map(v => visitCardHTML(v, false)).join('');
+
+    if (histGroupMode === 'month') {
+      el.innerHTML = renderGroupedByMonth(visits, isAdmin);
+    } else {
+      el.innerHTML = renderGroupedByClient(visits, isAdmin);
+    }
   } catch (e) {
     toast('Error al cargar historial', 'err');
   }
 }
 
-function visitCardHTML(v, showSeller) {
-  return `<div class="v-card" onclick="showDetail('${v.id}')">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div style="flex:1"><div class="client"><ion-icon name="business" style="font-size:14px;color:var(--cyan)"></ion-icon>${esc(v.cliente)}</div>
-      ${showSeller && v.seller_name ? `<div class="seller-tag" style="margin-top:4px"><ion-icon name="person" style="font-size:10px"></ion-icon>${esc(v.seller_name)}</div>` : ''}
-      <div class="meta"><ion-icon name="calendar-outline" style="font-size:11px"></ion-icon>${fmtDate(v.fecha)}<ion-icon name="time-outline" style="font-size:11px"></ion-icon>${esc(v.hora || '—')}</div></div>
-      ${v.foto_url ? '<div class="photo-ind"><ion-icon name="camera" style="font-size:12px"></ion-icon>📷</div>' : ''}
+function renderGroupedByClient(visits, isAdmin) {
+  const groups = {};
+  visits.forEach(v => {
+    const key = v.cliente || 'Sin cliente';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(v);
+  });
+  
+  const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+  return sorted.map(([client, items]) => `
+    <div class="gc-wrapper">
+      <div class="gc-header">
+        <div class="gc-title"><ion-icon name="business" style="font-size:18px;color:var(--cyan)"></ion-icon>${esc(client)}</div>
+        <div class="gc-badge">${items.length}</div>
+        <div class="gc-btn-nueva" onclick="switchTab(1)"><ion-icon name="add-circle"></ion-icon> Nueva</div>
+      </div>
+      ${items.map(v => gcVisitCardHTML(v, isAdmin)).join('')}
     </div>
-    ${v.direccion ? `<div class="detail"><ion-icon name="location-outline" style="font-size:12px"></ion-icon>${esc(v.direccion)}</div>` : ''}
-    ${v.contacto ? `<div class="detail"><ion-icon name="call-outline" style="font-size:12px"></ion-icon>${esc(v.contacto)}</div>` : ''}
-    ${v.descripcion ? `<div class="desc-box">${esc(v.descripcion)}</div>` : ''}
-    <div class="actions">
-      <button class="btn-sm btn-edit" onclick="event.stopPropagation();editVisit('${v.id}')"><ion-icon name="create-outline" style="font-size:14px"></ion-icon>Editar</button>
-      <button class="btn-sm btn-del" onclick="event.stopPropagation();deleteVisit('${v.id}')"><ion-icon name="trash-outline" style="font-size:14px"></ion-icon>Eliminar</button>
-    </div></div>`;
+  `).join('');
+}
+
+function renderGroupedByMonth(visits, isAdmin) {
+  const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const groups = {};
+  visits.forEach(v => {
+    const d = v.fecha ? new Date(v.fecha + 'T00:00:00') : new Date(v.created_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
+    if (!groups[key]) groups[key] = { label, items: [] };
+    groups[key].items.push(v);
+  });
+  const sorted = Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+  
+  return sorted.map(([, { label, items }]) => `
+    <div class="gc-wrapper">
+      <div class="gc-header" style="border-color:rgba(232,160,32,.2)">
+        <div class="gc-title"><ion-icon name="calendar" style="font-size:18px;color:var(--amber)"></ion-icon>${label}</div>
+        <div class="gc-badge" style="background:var(--amber)">${items.length}</div>
+        <div class="gc-btn-nueva" onclick="switchTab(1)"><ion-icon name="add-circle"></ion-icon> Nueva</div>
+      </div>
+      ${items.map(v => gcVisitCardHTML(v, isAdmin)).join('')}
+    </div>
+  `).join('');
+}
+
+function histExportCSV() {
+  if (currentUser?.role === 'admin') adminExportCSV();
+  else exportCSV();
+}
+
+function gcVisitCardHTML(v, showSeller) {
+  const photoTag = v.foto_url 
+    ? `<div class="gc-v-foot"><ion-icon name="camera" style="font-size:14px"></ion-icon> Con foto</div>` 
+    : '';
+
+  return `<div class="gc-visit" onclick="showDetail('${v.id}')" style="cursor:pointer">
+    <div class="gc-v-actions" onclick="event.stopPropagation()">
+      <ion-icon name="create-outline" onclick="editVisit('${v.id}')"></ion-icon>
+      <ion-icon name="trash-outline" onclick="deleteVisit('${v.id}')"></ion-icon>
+    </div>
+    
+    <div class="gc-v-row" style="margin-bottom:2px"><ion-icon name="calendar-outline"></ion-icon> ${v.fecha || 'Sin fecha'}</div>
+    <div class="gc-v-row" style="margin-bottom:8px"><ion-icon name="time-outline"></ion-icon> ${(v.hora || 'Sin hora').substring(0,5)}</div>
+    
+    ${v.direccion ? `<div class="gc-v-row"><ion-icon name="location-outline"></ion-icon> ${esc(v.direccion)}</div>` : ''}
+    ${v.contacto ? `<div class="gc-v-row"><ion-icon name="person-outline"></ion-icon> ${esc(v.contacto)}</div>` : ''}
+    ${showSeller && v.seller_name ? `<div class="gc-v-row" style="color:var(--amber)"><ion-icon name="person-circle-outline"></ion-icon> ${esc(v.seller_name)}</div>` : ''}
+    
+    ${v.descripcion ? `<div class="gc-v-desc">${esc(v.descripcion)}</div>` : ''}
+    ${photoTag}
+  </div>`;
 }
 
 // ── Detail ──
@@ -242,9 +727,13 @@ async function showDetail(id) {
       </div>
       ${v.seller_name ? `<div class="det-item"><ion-icon name="person"></ion-icon><div><div class="lbl2">Vendedor</div><div class="val">${esc(v.seller_name)}</div></div></div>` : ''}
       <div class="det-item"><ion-icon name="calendar-outline"></ion-icon><div><div class="lbl2">Fecha</div><div class="val">${fmtDate(v.fecha)}</div></div></div>
-      <div class="det-item"><ion-icon name="time-outline"></ion-icon><div><div class="lbl2">Hora</div><div class="val">${esc(v.hora || '—')}</div></div></div>
+      <div class="det-item"><ion-icon name="time-outline"></ion-icon><div><div class="lbl2">Hora Ingreso</div><div class="val">${esc(v.hora || '—')}</div></div></div>
+      <div class="det-item"><ion-icon name="time"></ion-icon><div><div class="lbl2">Hora Salida</div><div class="val">${esc(v.hora_salida || '—')}</div></div></div>
       <div class="det-item"><ion-icon name="location-outline"></ion-icon><div><div class="lbl2">Dirección</div><div class="val">${esc(v.direccion || '—')}</div></div></div>
-      <div class="det-item"><ion-icon name="call-outline"></ion-icon><div><div class="lbl2">Contacto</div><div class="val">${esc(v.contacto || '—')}</div></div></div>
+      <div class="det-item"><ion-icon name="person-outline"></ion-icon><div><div class="lbl2">Contacto</div><div class="val">${esc(v.contacto || '—')}</div></div></div>
+      ${v.cargo ? `<div class="det-item"><ion-icon name="briefcase-outline"></ion-icon><div><div class="lbl2">Cargo</div><div class="val">${esc(v.cargo)}</div></div></div>` : ''}
+      ${v.telefono ? `<div class="det-item"><ion-icon name="call-outline"></ion-icon><div><div class="lbl2">Teléfono</div><div class="val">${esc(v.telefono)}</div></div></div>` : ''}
+      ${v.mail ? `<div class="det-item"><ion-icon name="mail-outline"></ion-icon><div><div class="lbl2">Email</div><div class="val">${esc(v.mail)}</div></div></div>` : ''}
       ${v.descripcion ? `<div style="margin-top:8px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><ion-icon name="document-text" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Descripción</span></div>
         <div class="desc-box" style="-webkit-line-clamp:unset">${esc(v.descripcion)}</div></div>` : ''}
@@ -252,7 +741,8 @@ async function showDetail(id) {
         Creado: ${v.created_at ? new Date(v.created_at).toLocaleString('es-CL') : '—'} · Editado: ${v.updated_at ? new Date(v.updated_at).toLocaleString('es-CL') : '—'}
       </div>
     </div>
-    ${photoSrc ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="camera" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto de la Visita</span></div><img src="${photoSrc}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
+    ${photoSrc ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="camera" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto de Ingreso</span></div><img src="${photoSrc}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
+    ${v.foto_adicional_url ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="images" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto Adicional</span></div><img src="${API}${v.foto_adicional_url}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
     <button class="btn-cyan" onclick="editVisit('${v.id}')" style="margin-bottom:10px"><ion-icon name="create-outline" style="font-size:18px"></ion-icon>EDITAR VISITA</button>
     <button class="btn-glass" onclick="deleteVisit('${v.id}')" style="border-color:rgba(255,68,68,.3);color:var(--danger)"><ion-icon name="trash-outline" style="font-size:18px"></ion-icon>ELIMINAR VISITA</button>`;
     showScreen('s-detail');
@@ -281,10 +771,14 @@ async function editVisit(id) {
     editPhotoChanged = false;
     const el = document.getElementById('e-content');
     el.innerHTML = `<div class="card">
-      <div class="row" style="margin-bottom:14px"><div><label class="lbl">Fecha</label><input class="inp inp-simple" type="date" id="e-fecha" value="${v.fecha}"></div><div><label class="lbl">Hora</label><input class="inp inp-simple" type="time" id="e-hora" value="${v.hora || ''}"></div></div>
+      <div class="row" style="margin-bottom:14px"><div><label class="lbl">Fecha</label><input class="inp inp-simple" type="date" id="e-fecha" value="${v.fecha}"></div><div><label class="lbl">Hora Ingreso</label><input class="inp inp-simple" type="time" id="e-hora-ingreso" value="${v.hora || ''}"></div></div>
+      <div style="margin-bottom:14px"><label class="lbl">Hora Salida</label><input class="inp inp-simple" type="time" id="e-hora-salida" value="${v.hora_salida || ''}"></div>
       <div style="margin-bottom:14px"><label class="lbl">Cliente *</label><input class="inp inp-simple" id="e-cliente" value="${esc(v.cliente)}"></div>
       <div style="margin-bottom:14px"><label class="lbl">Dirección *</label><input class="inp inp-simple" id="e-dir" value="${esc(v.direccion || '')}"></div>
       <div style="margin-bottom:14px"><label class="lbl">Contacto</label><input class="inp inp-simple" id="e-contacto" value="${esc(v.contacto || '')}"></div>
+      <div style="margin-bottom:14px"><label class="lbl">Cargo</label><input class="inp inp-simple" id="e-cargo" value="${esc(v.cargo || '')}"></div>
+      <div style="margin-bottom:14px"><label class="lbl">Teléfono</label><input class="inp inp-simple" id="e-telefono" value="${esc(v.telefono || '')}"></div>
+      <div style="margin-bottom:14px"><label class="lbl">Mail</label><input class="inp inp-simple" id="e-mail" value="${esc(v.mail || '')}"></div>
       <div style="margin-bottom:14px"><label class="lbl">Descripción</label><textarea class="inp inp-simple" id="e-desc">${esc(v.descripcion || '')}</textarea></div>
       <div style="margin-bottom:16px"><label class="lbl">Foto</label>
         <div id="e-photo-btns" class="photo-btns" style="${editPhotoData ? 'display:none' : ''}">
@@ -328,9 +822,13 @@ async function saveEdit(id) {
   try {
     const body = {
       fecha: document.getElementById('e-fecha').value,
-      hora: document.getElementById('e-hora').value,
+      hora: document.getElementById('e-hora-ingreso').value,
+      hora_salida: document.getElementById('e-hora-salida').value.trim(),
       cliente, direccion: dir,
       contacto: document.getElementById('e-contacto').value.trim(),
+      cargo: document.getElementById('e-cargo').value.trim(),
+      telefono: document.getElementById('e-telefono').value.trim(),
+      mail: document.getElementById('e-mail').value.trim(),
       descripcion: document.getElementById('e-desc').value.trim()
     };
     if (editPhotoChanged) {
@@ -356,7 +854,7 @@ async function deleteVisit(id) {
     toast('✓ Visita eliminada', 'ok');
     const active = document.querySelector('.screen.active').id;
     if (active === 's-detail' || active === 's-edit') goBack();
-    else if (active === 's-admin') loadAdminVisits();
+    else if (active === 's-seller-hist') showSellerHistory(currentSellerEmail, document.getElementById('sh-title').textContent);
     else renderHistory();
   } catch (e) {
     toast(e.message, 'err');
@@ -376,73 +874,90 @@ async function exportCSV() {
   } catch (e) { toast('Error al exportar', 'err'); }
 }
 
-// ── Admin Functions ──
+// ── Admin Panel — Sellers List ──
 async function loadAdminStats() {
   try {
-    const data = await api('/api/admin/stats');
-    document.getElementById('admin-stats').innerHTML = `
-      <div class="stat-card"><div class="stat-num">${data.totalVisits}</div><div class="stat-lbl">Total Visitas</div></div>
-      <div class="stat-card"><div class="stat-num">${data.activeSellers}</div><div class="stat-lbl">Vendedores Activos</div></div>
-      <div class="stat-card amber"><div class="stat-num">${data.monthVisits}</div><div class="stat-lbl">Visitas del Mes</div></div>
-      <div class="stat-card"><div class="stat-num">${data.withPhoto}</div><div class="stat-lbl">Con Foto</div></div>`;
-    // Populate seller filter
-    const sel = document.getElementById('a-seller-filter');
-    const current = sel.value;
-    sel.innerHTML = '<option value="">Todos los vendedores</option>' +
-      (data.perSeller || []).map(s => `<option value="${s.email}">${s.name} (${s.visit_count})</option>`).join('');
-    sel.value = current;
-  } catch (e) { console.error(e); }
-}
-
-async function loadAdminVisits() {
-  try {
-    const seller = document.getElementById('a-seller-filter')?.value || '';
-    const search = document.getElementById('a-search')?.value || '';
-    const from = document.getElementById('a-from')?.value || '';
-    const to = document.getElementById('a-to')?.value || '';
-    let q = '/api/admin/visits?';
-    if (seller) q += `seller=${encodeURIComponent(seller)}&`;
-    if (search) q += `search=${encodeURIComponent(search)}&`;
-    if (from) q += `from=${from}&`;
-    if (to) q += `to=${to}&`;
-    const data = await api(q);
-    const el = document.getElementById('a-list');
-    if (!(data.visits || []).length) {
-      el.innerHTML = '<div class="empty"><ion-icon name="file-tray-outline"></ion-icon><p>No hay visitas</p></div>';
+    const data = await api('/api/admin/sellers');
+    const sellers = data.sellers || [];
+    const el = document.getElementById('admin-sellers-list');
+    if (!sellers.length) {
+      el.innerHTML = '<div class="empty"><ion-icon name="people-outline"></ion-icon><p>No hay vendedores registrados</p></div>';
       return;
     }
-    el.innerHTML = `<p style="font-size:11px;color:var(--t50);margin-bottom:8px">${data.total} visita(s)</p>` +
-      data.visits.map(v => visitCardHTML(v, true)).join('');
-  } catch (e) { toast('Error al cargar visitas admin', 'err'); }
-}
-
-async function showAdminSellers() {
-  navHistory.push('s-admin');
-  try {
-    const data = await api('/api/admin/sellers');
-    const el = document.getElementById('sellers-list');
-    el.innerHTML = (data.sellers || []).map(s => `
-      <div class="seller-card">
-        <ion-icon name="person-circle" style="font-size:36px;color:${s.active ? 'var(--cyan)' : 'var(--danger)'}"></ion-icon>
-        <div class="seller-info">
+    el.innerHTML = sellers.map(s => `
+      <div class="seller-card" style="cursor:pointer" onclick="showSellerHistory('${esc(s.email)}', '${esc(s.name)}')">
+        <ion-icon name="person-circle" style="font-size:40px;color:${s.active ? 'var(--cyan)' : 'var(--danger)'}"></ion-icon>
+        <div class="seller-info" style="flex:1">
           <div class="seller-name">${esc(s.name)}</div>
           <div class="seller-email">${esc(s.email)}</div>
           <div class="seller-count">${s.visit_count} visitas · ${s.active ? '✅ Activo' : '🚫 Inactivo'}</div>
         </div>
-        <button class="toggle-btn ${s.active ? 'toggle-active' : 'toggle-inactive'}" onclick="toggleSeller('${s.id}')">
-          ${s.active ? 'Desactivar' : 'Activar'}
-        </button>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          <button class="toggle-btn ${s.active ? 'toggle-active' : 'toggle-inactive'}" onclick="event.stopPropagation();toggleSeller('${s.id}')">
+            ${s.active ? 'Desactivar' : 'Activar'}
+          </button>
+          <ion-icon name="chevron-forward" style="font-size:18px;color:var(--t50)"></ion-icon>
+        </div>
       </div>`).join('');
-    showScreen('s-sellers');
-  } catch (e) { toast(e.message, 'err'); }
+  } catch (e) { console.error(e); }
+}
+
+async function loadAdminVisits() {
+  // Kept for backward compatibility, just reload sellers
+  loadAdminStats();
 }
 
 async function toggleSeller(id) {
   try {
     const data = await api(`/api/admin/sellers/${id}`, { method: 'PUT' });
     toast(data.message, 'ok');
-    showAdminSellers();
+    loadAdminStats();
   } catch (e) { toast(e.message, 'err'); }
+}
+
+// ── Seller History Screen ──
+let sellerHistVisits = [];
+let currentSellerEmail = '';
+
+async function showSellerHistory(email, name) {
+  currentSellerEmail = email;
+  navHistory.push('s-admin');
+  document.getElementById('sh-title').textContent = name;
+  document.getElementById('sh-search').value = '';
+  document.getElementById('sh-list').innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+  showScreen('s-seller-hist');
+
+  try {
+    const data = await api(`/api/admin/visits?seller=${encodeURIComponent(email)}`);
+    sellerHistVisits = data.visits || [];
+    renderSellerHistory(sellerHistVisits);
+  } catch (e) {
+    toast('Error al cargar historial', 'err');
+  }
+}
+
+function filterSellerHistory() {
+  const q = (document.getElementById('sh-search').value || '').toLowerCase();
+  if (!q) return renderSellerHistory(sellerHistVisits);
+  const filtered = sellerHistVisits.filter(v =>
+    (v.cliente || '').toLowerCase().includes(q) ||
+    (v.direccion || '').toLowerCase().includes(q) ||
+    (v.contacto || '').toLowerCase().includes(q) ||
+    (v.descripcion || '').toLowerCase().includes(q)
+  );
+  renderSellerHistory(filtered);
+}
+
+function renderSellerHistory(visits) {
+  const clients = new Set(visits.map(v => v.cliente));
+  document.getElementById('sh-total').textContent = visits.length + ' visitas';
+  document.getElementById('sh-clients').textContent = clients.size + ' clientes';
+  const el = document.getElementById('sh-list');
+  if (!visits.length) {
+    el.innerHTML = '<div class="empty"><ion-icon name="file-tray-outline"></ion-icon><p>No hay visitas registradas</p></div>';
+    return;
+  }
+  el.innerHTML = renderGroupedByClient(visits, false);
 }
 
 async function adminExportCSV() {
@@ -507,18 +1022,44 @@ function compressImage(file, callback, maxW = 1200, quality = 0.8) {
   reader.readAsDataURL(file);
 }
 
+// ── Splash Screen ──
+function hideSplash() {
+  const splash = document.getElementById('splash');
+  const appFrame = document.getElementById('app-frame');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(() => { splash.style.display = 'none'; }, 600);
+  }
+  if (appFrame) {
+    appFrame.style.opacity = '1';
+  }
+}
+
 // ── Init ──
 window.onload = async function () {
+  // Wait for splash animation to complete (at least 2.3s)
+  const splashDelay = new Promise(resolve => setTimeout(resolve, 2300));
+
+  let appReady;
   if (token) {
     try {
       const data = await api('/api/auth/me');
       currentUser = data.user;
-      enterApp();
+      appReady = 'authenticated';
     } catch (e) {
       token = null;
       localStorage.removeItem('inpamind_token');
-      showScreen('s-login');
+      appReady = 'login';
     }
+  } else {
+    appReady = 'login';
+  }
+
+  await splashDelay;
+  hideSplash();
+
+  if (appReady === 'authenticated') {
+    enterApp();
   } else {
     showScreen('s-login');
   }

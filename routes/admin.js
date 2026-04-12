@@ -9,7 +9,33 @@ router.use(authMiddleware, adminMiddleware);
 
 // GET /api/admin/stats
 router.get('/stats', (req, res) => {
-  try { res.json(db.getStats()); }
+  try {
+    const stats = db.getStats();
+    const now = new Date();
+
+    // Daily data for last 7 days
+    const allVisits = db.getAllVisits({});
+    const dailyData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('es-CL', { weekday: 'short' });
+      dailyData.push({ date: dateStr, label: dayName, count: allVisits.filter(v => v.fecha === dateStr).length });
+    }
+
+    // Monthly data for last 6 months
+    const monthlyData = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      const mEndStr = `${mEnd.getFullYear()}-${String(mEnd.getMonth() + 1).padStart(2, '0')}-${String(mEnd.getDate()).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('es-CL', { month: 'short' });
+      monthlyData.push({ label, count: allVisits.filter(v => v.fecha >= mStart && v.fecha <= mEndStr).length });
+    }
+
+    res.json({ ...stats, dailyData, monthlyData });
+  }
   catch (err) { res.status(500).json({ error: 'Error al obtener estadísticas' }); }
 });
 

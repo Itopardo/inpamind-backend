@@ -11,10 +11,31 @@
 <link rel="manifest" href="/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-<link rel="stylesheet" href="/styles.css?v=2">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/styles.css?v=3">
 </head>
 <body>
-<div id="app-frame">
+
+<!-- ========== SPLASH SCREEN ========== -->
+<div id="splash" class="splash">
+  <div class="splash-content">
+    <div class="splash-logo-ring">
+      <div class="splash-logo-inner">
+        <img src="/logo-inpamind.png" alt="INPAMIND" class="splash-logo-img">
+      </div>
+    </div>
+    <div class="splash-text">
+      <p class="splash-title">INPAMIND</p>
+      <p class="splash-sub">SISTEMA DE GESTIÓN DE VISITAS</p>
+    </div>
+    <div class="splash-loader">
+      <div class="splash-loader-bar"></div>
+    </div>
+  </div>
+  <p class="splash-footer">© 2026 INPAMIND</p>
+</div>
+
+<div id="app-frame" style="opacity:0">
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -62,45 +83,133 @@
   </div>
 </div>
 
-<!-- ========== HOME VENDEDOR ========== -->
+<!-- ========== HOME / DASHBOARD ========== -->
 <div class="screen" id="s-home">
-  <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;min-height:100%">
-    <div style="align-self:flex-end"><button class="btn-glass" style="width:auto;padding:8px 16px;font-size:12px;border-radius:24px" onclick="doLogout()"><ion-icon name="log-out-outline" style="font-size:16px"></ion-icon>Salir</button></div>
-    <div class="logo-card" style="margin:24px 0;padding:20px 28px"><img src="/logo-inpamind.png" alt="INPAMIND" style="height:48px;width:auto"></div>
-    <p style="font-size:13px;color:var(--t70);letter-spacing:2.5px;text-align:center;line-height:22px;margin-bottom:28px">SISTEMA DE GESTIÓN DE<br>VISITAS TÉCNICAS</p>
-    <div class="card" style="width:100%;max-width:340px;display:flex;align-items:center;gap:12px;margin-bottom:32px;padding:16px 20px">
-      <ion-icon name="person-circle-outline" style="font-size:32px;color:var(--cyan)"></ion-icon>
-      <div><p style="font-size:11px;color:var(--t50);letter-spacing:1px">Bienvenido</p><p style="font-size:17px;font-weight:700;margin-top:2px;color:var(--cyan)" id="welcomeName">Vendedor</p></div>
+  <div class="scroll" style="padding:20px 16px 16px">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="avatar" id="homeAvatar">V</div>
+        <div>
+          <p style="font-size:11px;color:var(--t50);letter-spacing:1px">Bienvenido</p>
+          <p style="font-size:17px;font-weight:700;color:var(--cyan)" id="welcomeName">Vendedor</p>
+        </div>
+      </div>
+      <button class="btn-glass" style="width:auto;padding:8px 16px;font-size:12px;border-radius:24px" onclick="doLogout()"><ion-icon name="log-out-outline" style="font-size:16px"></ion-icon>Salir</button>
     </div>
-    <button class="btn-cyan" style="max-width:320px;margin-bottom:14px" onclick="switchTab(1)"><ion-icon name="add-circle-outline" style="font-size:22px"></ion-icon>NUEVA VISITA</button>
-    <button class="btn-glass" style="max-width:320px" onclick="switchTab(2)"><ion-icon name="time-outline" style="font-size:20px"></ion-icon>HISTORIAL DE VISITAS</button>
-    <p style="margin-top:auto;padding-top:24px;font-size:11px;color:var(--t50);letter-spacing:2px">INPAMIND © 2026 · <span id="footerName"></span></p>
+
+    <!-- Dynamic Dashboard Content -->
+    <div id="home-dashboard"></div>
+
+    <p style="text-align:center;padding-top:20px;font-size:11px;color:var(--t50);letter-spacing:2px">INPAMIND © 2026 · <span id="footerName"></span></p>
   </div>
   <div class="tab-bar" id="tabBar"></div>
 </div>
 
 <!-- ========== NUEVA VISITA ========== -->
 <div class="screen" id="s-nueva">
-  <div class="hdr"><ion-icon name="add-circle" style="font-size:22px;color:var(--cyan)"></ion-icon><h3>Nueva Visita Técnica</h3></div>
+  <div class="hdr" style="justify-content:center;padding:16px;border-bottom:none">
+    <h3 style="text-align:center;text-transform:uppercase;letter-spacing:1px;font-weight:800;font-size:18px">REGISTRAR NUEVA VISITA</h3>
+  </div>
   <div class="scroll" style="padding:0 16px 20px">
-    <div class="card">
-      <div class="row" style="margin-bottom:14px">
-        <div><label class="lbl"><ion-icon name="calendar-outline" style="font-size:12px;color:var(--cyan)"></ion-icon> Fecha *</label><input class="inp inp-simple" type="date" id="n-fecha"></div>
-        <div><label class="lbl"><ion-icon name="time-outline" style="font-size:12px;color:var(--cyan)"></ion-icon> Hora *</label><input class="inp inp-simple" type="time" id="n-hora"></div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      
+      <div class="field-wrap">
+        <label>Fecha (automático)</label>
+        <div class="inp-box locked"><ion-icon name="calendar-outline"></ion-icon><input type="date" id="n-fecha" readonly><ion-icon name="lock-closed" class="inp-icon-end"></ion-icon></div>
       </div>
-      <div style="margin-bottom:14px"><label class="lbl"><ion-icon name="business-outline" style="font-size:12px;color:var(--cyan)"></ion-icon> Cliente *</label><input class="inp inp-simple" id="n-cliente" placeholder="Nombre del cliente"></div>
-      <div style="margin-bottom:14px"><label class="lbl"><ion-icon name="location-outline" style="font-size:12px;color:var(--cyan)"></ion-icon> Dirección *</label><input class="inp inp-simple" id="n-dir" placeholder="Dirección de visita"></div>
-      <div style="margin-bottom:14px"><label class="lbl"><ion-icon name="call-outline" style="font-size:12px;color:var(--cyan)"></ion-icon> Contacto</label><input class="inp inp-simple" id="n-contacto" placeholder="Nombre / teléfono de contacto"></div>
-      <div style="margin-bottom:14px"><label class="lbl"><ion-icon name="document-text-outline" style="font-size:12px;color:var(--cyan)"></ion-icon> Descripción</label><textarea class="inp inp-simple" id="n-desc" placeholder="Detalle la visita, productos consultados, acuerdos, próximos pasos..."></textarea></div>
-      <div style="margin-bottom:18px">
-        <label class="lbl"><ion-icon name="camera-outline" style="font-size:12px;color:var(--cyan)"></ion-icon> Foto</label>
-        <div id="n-photo-btns" class="photo-btns">
-          <label class="photo-pick"><ion-icon name="camera"></ion-icon><span>📷 Cámara</span><input type="file" accept="image/*" capture="environment" onchange="handleNewPhoto(event)" style="display:none"></label>
-          <label class="photo-pick"><ion-icon name="images"></ion-icon><span>🖼️ Galería</span><input type="file" accept="image/*" onchange="handleNewPhoto(event)" style="display:none"></label>
+
+      <div class="field-wrap" id="n-cliente-wrap" style="position:relative">
+        <label>Cliente</label>
+        <div class="inp-box">
+          <ion-icon name="business-outline"></ion-icon>
+          <input id="n-cliente" placeholder="Buscar o crear cliente..." oninput="handleClientSearch()" autocomplete="off">
+          <ion-icon name="chevron-down" class="inp-icon-end" style="cursor:pointer" onclick="toggleClientList()"></ion-icon>
         </div>
-        <div id="n-photo-preview" class="photo-preview" style="display:none"><img id="n-photo-img"><button class="rm" onclick="removeNewPhoto()">✕</button></div>
+        <div id="n-cliente-list" class="autocomplete-list" style="display:none"></div>
       </div>
-      <button class="btn-cyan" id="btnSaveNew" onclick="saveNewVisit()"><ion-icon name="cloud-upload-outline" style="font-size:20px"></ion-icon>GUARDAR VISITA</button>
+
+      <div class="field-wrap">
+        <label>Hora de Ingreso (automático)</label>
+        <div class="inp-box locked"><ion-icon name="time-outline"></ion-icon><input type="time" id="n-hora-ingreso" readonly><ion-icon name="lock-closed" class="inp-icon-end"></ion-icon></div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Hora de Salida *</label>
+        <div class="inp-box"><ion-icon name="time-outline"></ion-icon><input type="time" id="n-hora-salida" placeholder="HH:MM"></div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Dirección *</label>
+        <div class="inp-box"><ion-icon name="location-outline"></ion-icon><input id="n-dir" placeholder="Dirección de la visita"></div>
+      </div>
+
+      <div class="field-wrap" id="n-contacto-wrap" style="position:relative">
+        <label>Contacto *</label>
+        <div class="inp-box">
+          <ion-icon name="person-outline"></ion-icon>
+          <input id="n-contacto" placeholder="Buscar o crear contacto..." oninput="handleContactSearch()" autocomplete="off">
+          <ion-icon name="chevron-down" class="inp-icon-end" style="cursor:pointer" onclick="toggleContactList()"></ion-icon>
+        </div>
+        <div id="n-contacto-list" class="autocomplete-list" style="display:none"></div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Cargo *</label>
+        <div class="inp-box"><ion-icon name="briefcase-outline"></ion-icon><input id="n-cargo" placeholder="Cargo del contacto"></div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Teléfono</label>
+        <div class="inp-box"><ion-icon name="call-outline"></ion-icon><input id="n-telefono" type="tel" placeholder="Número de teléfono"></div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Mail</label>
+        <div class="inp-box"><ion-icon name="mail-outline"></ion-icon><input id="n-mail" type="email" placeholder="Correo electrónico"></div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Descripción</label>
+        <div class="inp-box textarea"><ion-icon name="document-text-outline" style="margin-top:2px"></ion-icon><textarea id="n-desc" placeholder="Descripción de la visita"></textarea></div>
+      </div>
+
+      <!-- Foto de Ingreso -->
+      <div class="field-wrap">
+        <label>Foto de Ingreso * (Solo cámara)</label>
+        <label class="foto-btn full" id="btn-foto-ingreso">
+          <ion-icon name="camera" style="font-size:18px"></ion-icon> <span>Tomar Foto</span>
+          <input type="file" accept="image/*" capture="environment" onchange="handleFoto('ingreso', event)" style="display:none">
+        </label>
+        <div id="preview-ingreso" style="display:none;position:relative;margin-top:8px">
+          <img id="img-ingreso" style="width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.1)">
+          <button onclick="removeFoto('ingreso')" style="position:absolute;top:8px;right:8px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:10px;cursor:pointer">✕</button>
+        </div>
+      </div>
+
+      <!-- Foto Adicional -->
+      <div class="field-wrap" style="margin-bottom:20px">
+        <label>Foto Adicional (opcional)</label>
+        <div style="display:flex;gap:10px" id="btn-foto-adicional">
+          <label class="foto-btn">
+            <ion-icon name="camera" style="font-size:16px"></ion-icon> Cámara
+            <input type="file" accept="image/*" capture="environment" onchange="handleFoto('adicional', event)" style="display:none">
+          </label>
+          <label class="foto-btn" style="background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08)">
+            <ion-icon name="images" style="font-size:16px"></ion-icon> Galería
+            <input type="file" accept="image/*" onchange="handleFoto('adicional', event)" style="display:none">
+          </label>
+        </div>
+        <div id="preview-adicional" style="display:none;position:relative;margin-top:8px">
+          <img id="img-adicional" style="width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.1)">
+          <button onclick="removeFoto('adicional')" style="position:absolute;top:8px;right:8px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:10px;cursor:pointer">✕</button>
+        </div>
+      </div>
+
+      <button class="btn-cyan" id="btnSaveNew" onclick="saveNewVisit()" style="border-radius:24px;height:48px;font-size:14px;letter-spacing:1px;box-shadow:0 4px 15px rgba(65,198,246,.2)">
+        <ion-icon name="checkmark-circle-outline" style="font-size:20px;margin-right:6px"></ion-icon>GUARDAR VISITA
+      </button>
+
     </div>
   </div>
   <div class="tab-bar" id="tabBar2"></div>
@@ -108,15 +217,28 @@
 
 <!-- ========== HISTORIAL ========== -->
 <div class="screen" id="s-hist">
-  <div class="hdr">
-    <ion-icon name="list" style="font-size:22px;color:var(--cyan)"></ion-icon><h3>Historial de Visitas</h3>
-    <button class="btn-sm btn-edit" onclick="exportCSV()" style="font-size:11px"><ion-icon name="download-outline" style="font-size:14px"></ion-icon>CSV</button>
+  <div class="hdr" style="justify-content:center;padding:16px;border-bottom:none">
+    <h3 style="text-align:center;text-transform:uppercase;letter-spacing:1px;font-weight:800;font-size:18px">HISTORIAL DE VISITAS</h3>
   </div>
-  <div class="search-wrap"><ion-icon name="search-outline"></ion-icon><input id="h-search" placeholder="Buscar por cliente, dirección, contacto..." oninput="renderHistory()"></div>
-  <div style="display:flex;gap:16px;background:rgba(65,198,246,.1);border-radius:12px;padding:12px 16px;margin:0 16px 10px;font-size:12px;font-weight:600;align-items:center">
-    <span style="display:flex;align-items:center;gap:4px"><ion-icon name="document-text" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="st-total">0 visitas</span></span>
-    <span style="display:flex;align-items:center;gap:4px"><ion-icon name="people" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="st-clients">0 clientes</span></span>
+  
+  <div class="hist-tabs">
+    <div class="hist-tab active" data-group="client" onclick="setHistGroup('client')"><ion-icon name="business"></ion-icon>Por Cliente</div>
+    <div class="hist-tab" data-group="month" onclick="setHistGroup('month')"><ion-icon name="calendar"></ion-icon>Por Mes</div>
   </div>
+
+  <div style="display:flex;gap:10px;padding:0 16px 12px">
+    <div class="search-wrap" style="flex:1;margin:0"><ion-icon name="search-outline"></ion-icon><input id="h-search" placeholder="Buscar por cliente, dirección, contacto..." oninput="renderHistory()"></div>
+    <button class="btn-icon" style="border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);color:var(--cyan);width:45px;display:flex;align-items:center;justify-content:center" onclick="histExportCSV()">
+      <ion-icon name="download-outline" style="font-size:20px"></ion-icon>
+    </button>
+  </div>
+  
+  <div class="hist-stats">
+    <div class="hist-stat-item"><div class="hist-stat-num" id="st-total">0</div><div class="hist-stat-lbl">Visitas</div></div>
+    <div class="hist-stat-item"><div class="hist-stat-num" id="st-clients">0</div><div class="hist-stat-lbl">Clientes</div></div>
+    <div class="hist-stat-item"><div class="hist-stat-num" id="st-months">0</div><div class="hist-stat-lbl">Meses</div></div>
+  </div>
+
   <div class="scroll" style="padding:0 16px 16px" id="h-list"></div>
   <div class="tab-bar" id="tabBar3"></div>
 </div>
@@ -141,45 +263,34 @@
   <div class="scroll" style="padding:0 16px 20px" id="e-content"></div>
 </div>
 
-<!-- ========== ADMIN PANEL ========== -->
+<!-- ========== ADMIN - VENDEDORES ========== -->
 <div class="screen" id="s-admin">
   <div class="admin-hdr">
-    <ion-icon name="shield-checkmark" style="font-size:22px;color:var(--amber)"></ion-icon>
-    <h3>PANEL DE ADMINISTRADOR</h3>
+    <ion-icon name="people" style="font-size:22px;color:var(--amber)"></ion-icon>
+    <h3>VENDEDORES</h3>
     <button class="btn-glass" style="width:auto;padding:6px 12px;font-size:11px;border-radius:20px" onclick="doLogout()"><ion-icon name="log-out-outline" style="font-size:14px"></ion-icon></button>
   </div>
-  <div class="scroll" style="padding:12px 0 16px">
-    <!-- Stats -->
-    <div class="stat-grid" id="admin-stats"></div>
-    <!-- Filters -->
-    <div class="filter-bar">
-      <select id="a-seller-filter" onchange="loadAdminVisits()"><option value="">Todos los vendedores</option></select>
-      <input type="date" id="a-from" onchange="loadAdminVisits()" placeholder="Desde">
-      <input type="date" id="a-to" onchange="loadAdminVisits()" placeholder="Hasta">
-    </div>
-    <div class="search-wrap"><ion-icon name="search-outline"></ion-icon><input id="a-search" placeholder="Buscar global..." oninput="loadAdminVisits()"></div>
-    <!-- Action buttons -->
-    <div style="display:flex;gap:8px;margin:0 16px 12px">
-      <button class="btn-sm btn-edit" onclick="adminExportCSV()" style="flex:1;justify-content:center"><ion-icon name="download-outline" style="font-size:14px"></ion-icon>Exportar CSV</button>
-      <button class="btn-sm" style="flex:1;justify-content:center;background:rgba(232,160,32,.12);color:var(--amber)" onclick="showAdminSellers()"><ion-icon name="people-outline" style="font-size:14px"></ion-icon>Vendedores</button>
-    </div>
-    <!-- Visit list -->
-    <div style="padding:0 16px" id="a-list"></div>
-  </div>
+  <div class="scroll" style="padding:16px" id="admin-sellers-list"></div>
   <div class="tab-bar" id="tabBar4"></div>
 </div>
 
-<!-- ========== ADMIN SELLERS ========== -->
-<div class="screen" id="s-sellers">
-  <div class="admin-hdr">
-    <button class="hdr-btn" onclick="goBack()" style="background:rgba(232,160,32,.15)"><ion-icon name="arrow-back" style="font-size:20px;color:var(--amber)"></ion-icon></button>
-    <h3>Gestión de Vendedores</h3>
+<!-- ========== SELLER HISTORY ========== -->
+<div class="screen" id="s-seller-hist">
+  <div class="hdr">
+    <button class="hdr-btn" onclick="goBack()"><ion-icon name="arrow-back" style="font-size:20px"></ion-icon></button>
+    <h3 id="sh-title" style="text-align:center">Historial Vendedor</h3>
+    <div style="width:36px"></div>
   </div>
-  <div class="scroll" style="padding:16px" id="sellers-list"></div>
+  <div class="search-wrap"><ion-icon name="search-outline"></ion-icon><input id="sh-search" placeholder="Buscar en visitas del vendedor..." oninput="filterSellerHistory()"></div>
+  <div style="display:flex;gap:16px;background:rgba(65,198,246,.1);border-radius:12px;padding:12px 16px;margin:0 16px 10px;font-size:12px;font-weight:600;align-items:center">
+    <span style="display:flex;align-items:center;gap:4px"><ion-icon name="document-text" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="sh-total">0 visitas</span></span>
+    <span style="display:flex;align-items:center;gap:4px"><ion-icon name="people" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="sh-clients">0 clientes</span></span>
+  </div>
+  <div class="scroll" style="padding:0 16px 16px" id="sh-list"></div>
 </div>
 </div><!-- /app-frame -->
 
-<script src="/app.js"></script>
+<script src="/app.js?v=3"></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}</script>
 </body>
 </html>

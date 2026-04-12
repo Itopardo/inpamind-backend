@@ -30,18 +30,30 @@ function deletePhoto(fotoPath) {
 // POST /api/visits
 router.post('/', authMiddleware, upload.single('foto'), (req, res) => {
   try {
-    const { fecha, hora, cliente, direccion, contacto, descripcion } = req.body;
+    const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion, foto_adicional_base64 } = req.body;
     if (!cliente || !direccion) return res.status(400).json({ error: 'Cliente y dirección son requeridos' });
 
     let fotoPath = null, fotoUrl = null;
+    let fotoAdicionalPath = null, fotoAdicionalUrl = null;
+
     if (req.file) { fotoPath = req.file.filename; fotoUrl = `/uploads/${req.file.filename}`; }
     else if (req.body.foto_base64) { fotoPath = saveBase64Photo(req.body.foto_base64); fotoUrl = `/uploads/${fotoPath}`; }
+
+    if (foto_adicional_base64) {
+      fotoAdicionalPath = saveBase64Photo(foto_adicional_base64);
+      fotoAdicionalUrl = `/uploads/${fotoAdicionalPath}`;
+    }
 
     const now = new Date().toISOString();
     const visit = db.createVisit({
       id: uuidv4(), user_id: req.user.id, fecha: fecha || now.split('T')[0], hora: hora || '',
-      cliente: cliente.trim(), direccion: direccion.trim(), contacto: contacto?.trim() || '',
-      descripcion: descripcion?.trim() || '', foto_path: fotoPath, foto_url: fotoUrl,
+      hora_salida: hora_salida || '',
+      cliente: cliente.trim(), direccion: direccion.trim(), 
+      contacto: contacto?.trim() || '', cargo: cargo?.trim() || '', 
+      telefono: telefono?.trim() || '', mail: mail?.trim() || '',
+      descripcion: descripcion?.trim() || '', 
+      foto_path: fotoPath, foto_url: fotoUrl,
+      foto_adicional_path: fotoAdicionalPath, foto_adicional_url: fotoAdicionalUrl,
       created_at: now, updated_at: now
     });
     res.status(201).json({ visit, message: '✓ Visita guardada correctamente' });
@@ -54,6 +66,48 @@ router.get('/', authMiddleware, (req, res) => {
     const visits = db.getVisitsByUser(req.user.id, req.query.search);
     res.json({ visits, total: visits.length });
   } catch (err) { res.status(500).json({ error: 'Error al obtener visitas' }); }
+});
+
+// GET /api/visits/stats/me — Personal stats for vendedor dashboard
+router.get('/stats/me', authMiddleware, (req, res) => {
+  try {
+    const allVisits = db.getVisitsByUser(req.user.id);
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const todayVisits = allVisits.filter(v => v.fecha === today).length;
+    const monthVisits = allVisits.filter(v => v.fecha >= monthStart).length;
+    const weekVisits = allVisits.filter(v => v.fecha >= weekAgo).length;
+    const uniqueClients = new Set(allVisits.map(v => v.cliente?.toLowerCase())).size;
+    const withPhoto = allVisits.filter(v => v.foto_url).length;
+
+    // Visits per day for last 7 days (for chart)
+    const dailyData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('es-CL', { weekday: 'short' });
+      dailyData.push({ date: dateStr, label: dayName, count: allVisits.filter(v => v.fecha === dateStr).length });
+    }
+
+    // Visits per month for last 6 months (for chart)
+    const monthlyData = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      const mEndStr = `${mEnd.getFullYear()}-${String(mEnd.getMonth() + 1).padStart(2, '0')}-${String(mEnd.getDate()).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('es-CL', { month: 'short' });
+      monthlyData.push({ label, count: allVisits.filter(v => v.fecha >= mStart && v.fecha <= mEndStr).length });
+    }
+
+    res.json({
+      total: allVisits.length, todayVisits, monthVisits, weekVisits,
+      uniqueClients, withPhoto, dailyData, monthlyData
+    });
+  } catch (err) { console.error('Stats error:', err); res.status(500).json({ error: 'Error al obtener estadísticas' }); }
 });
 
 // GET /api/visits/export/csv
@@ -86,7 +140,7 @@ router.put('/:id', authMiddleware, upload.single('foto'), (req, res) => {
     const visit = db.findVisitById(req.params.id);
     if (!visit || visit.user_id !== req.user.id) return res.status(404).json({ error: 'Visita no encontrada' });
 
-    const { fecha, hora, cliente, direccion, contacto, descripcion, remove_photo } = req.body;
+    const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion, remove_photo, remove_foto_adicional, foto_adicional_base64 } = req.body;
     if (!cliente || !direccion) return res.status(400).json({ error: 'Cliente y dirección son requeridos' });
 
     let fotoPath = visit.foto_path, fotoUrl = visit.foto_url;
@@ -94,9 +148,19 @@ router.put('/:id', authMiddleware, upload.single('foto'), (req, res) => {
     if (req.file) { deletePhoto(visit.foto_path); fotoPath = req.file.filename; fotoUrl = `/uploads/${req.file.filename}`; }
     else if (req.body.foto_base64) { deletePhoto(visit.foto_path); fotoPath = saveBase64Photo(req.body.foto_base64); fotoUrl = `/uploads/${fotoPath}`; }
 
-    const updated = db.updateVisit(req.params.id, { fecha, hora: hora || '', cliente: cliente.trim(),
-      direccion: direccion.trim(), contacto: contacto?.trim() || '', descripcion: descripcion?.trim() || '',
-      foto_path: fotoPath, foto_url: fotoUrl });
+    let fotoAdicionalPath = visit.foto_adicional_path, fotoAdicionalUrl = visit.foto_adicional_url;
+    if (remove_foto_adicional === 'true') { deletePhoto(visit.foto_adicional_path); fotoAdicionalPath = null; fotoAdicionalUrl = null; }
+    if (foto_adicional_base64) { deletePhoto(visit.foto_adicional_path); fotoAdicionalPath = saveBase64Photo(foto_adicional_base64); fotoAdicionalUrl = `/uploads/${fotoAdicionalPath}`; }
+
+    const updated = db.updateVisit(req.params.id, { 
+      fecha, hora: hora || '', hora_salida: hora_salida || '',
+      cliente: cliente.trim(), direccion: direccion.trim(), 
+      contacto: contacto?.trim() || '', cargo: cargo?.trim() || '',
+      telefono: telefono?.trim() || '', mail: mail?.trim() || '',
+      descripcion: descripcion?.trim() || '',
+      foto_path: fotoPath, foto_url: fotoUrl,
+      foto_adicional_path: fotoAdicionalPath, foto_adicional_url: fotoAdicionalUrl
+    });
     res.json({ visit: updated, message: '✓ Visita actualizada' });
   } catch (err) { console.error('Update error:', err); res.status(500).json({ error: 'Error al actualizar la visita' }); }
 });

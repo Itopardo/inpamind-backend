@@ -1,12 +1,11 @@
-const CACHE_NAME = 'inpamind-v2';
+const CACHE_NAME = 'inpamind-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/styles.css',
-  '/app.js',
   '/manifest.json',
   '/icon-192.svg',
-  '/icon-512.svg'
+  '/icon-512.svg',
+  '/logo-inpamind.png'
 ];
 
 // Install — cache static assets
@@ -27,7 +26,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch — network first for API, cache first for static
+// Fetch — network first for everything, fallback to cache
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   
@@ -40,16 +39,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: cache first, then network
+  // Static assets: network first, fallback to cache
   event.respondWith(
-    caches.match(request).then((cached) => {
-      return cached || fetch(request).then((response) => {
-        if (response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      });
-    }).catch(() => caches.match('/index.html'))
+    fetch(request).then((response) => {
+      if (response.status === 200) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(request).then(cached => cached || caches.match('/index.html')))
   );
 });
