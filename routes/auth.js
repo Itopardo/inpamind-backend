@@ -7,20 +7,20 @@ const { authMiddleware, generateToken } = require('../middleware/auth');
 const router = express.Router();
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
     if (password.length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
 
-    if (db.findUserByEmail(email)) return res.status(409).json({ error: 'El email ya está registrado' });
+    if (await db.findUserByEmail(email)) return res.status(409).json({ error: 'El email ya está registrado' });
 
     const user = {
       id: uuidv4(), name: name.trim(), email: email.toLowerCase().trim(),
       password: bcrypt.hashSync(password, 10), role: 'vendedor', active: true,
       created_at: new Date().toISOString()
     };
-    db.createUser(user);
+    await db.createUser(user);
     const userData = { id: user.id, name: user.name, email: user.email, role: user.role };
     res.status(201).json({ token: generateToken(userData), user: userData });
   } catch (err) {
@@ -30,12 +30,12 @@ router.post('/register', (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email y contraseña son requeridos' });
 
-    const user = db.findUserByEmail(email.toLowerCase().trim());
+    const user = await db.findUserByEmail(email.toLowerCase().trim());
     if (!user) return res.status(401).json({ error: 'Email o contraseña incorrectos' });
     if (!user.active) return res.status(403).json({ error: 'Tu cuenta ha sido desactivada. Contacta al administrador.' });
     if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ error: 'Email o contraseña incorrectos' });
@@ -49,8 +49,8 @@ router.post('/login', (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', authMiddleware, (req, res) => {
-  const user = db.findUserById(req.user.id);
+router.get('/me', authMiddleware, async (req, res) => {
+  const user = await db.findUserById(req.user.id);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, active: user.active } });
 });

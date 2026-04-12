@@ -8,13 +8,13 @@ const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
 
 // GET /api/admin/stats
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
-    const stats = db.getStats();
+    const stats = await db.getStats();
     const now = new Date();
 
     // Daily data for last 7 days
-    const allVisits = db.getAllVisits({});
+    const allVisits = await db.getAllVisits({});
     const dailyData = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
@@ -40,35 +40,35 @@ router.get('/stats', (req, res) => {
 });
 
 // GET /api/admin/sellers
-router.get('/sellers', (req, res) => {
-  try { res.json({ sellers: db.getSellers() }); }
+router.get('/sellers', async (req, res) => {
+  try { res.json({ sellers: await db.getSellers() }); }
   catch (err) { res.status(500).json({ error: 'Error al obtener vendedores' }); }
 });
 
 // PUT /api/admin/sellers/:id — Toggle active
-router.put('/sellers/:id', (req, res) => {
+router.put('/sellers/:id', async (req, res) => {
   try {
-    const sellers = db.getSellers();
+    const sellers = await db.getSellers();
     const seller = sellers.find(s => s.id === req.params.id);
     if (!seller) return res.status(404).json({ error: 'Vendedor no encontrado' });
-    const updated = db.updateUser(req.params.id, { active: !seller.active });
+    const updated = await db.updateUser(req.params.id, { active: !seller.active });
     res.json({ message: updated.active ? 'Vendedor activado' : 'Vendedor desactivado', active: updated.active });
   } catch (err) { res.status(500).json({ error: 'Error al actualizar vendedor' }); }
 });
 
 // GET /api/admin/visits
-router.get('/visits', (req, res) => {
+router.get('/visits', async (req, res) => {
   try {
-    const visits = db.getAllVisits({ seller: req.query.seller, search: req.query.search, from: req.query.from, to: req.query.to });
+    const visits = await db.getAllVisits({ seller: req.query.seller, search: req.query.search, from: req.query.from, to: req.query.to });
     res.json({ visits, total: visits.length });
   } catch (err) { res.status(500).json({ error: 'Error al obtener visitas' }); }
 });
 
 // PUT /api/admin/visits/:id
-router.put('/visits/:id', (req, res) => {
+router.put('/visits/:id', async (req, res) => {
   try {
     const { fecha, hora, cliente, direccion, contacto, descripcion } = req.body;
-    const updated = db.updateVisit(req.params.id, { fecha, hora: hora || '', cliente: cliente?.trim(),
+    const updated = await db.updateVisit(req.params.id, { fecha, hora: hora || '', cliente: cliente?.trim(),
       direccion: direccion?.trim(), contacto: contacto?.trim() || '', descripcion: descripcion?.trim() || '' });
     if (!updated) return res.status(404).json({ error: 'Visita no encontrada' });
     res.json({ visit: updated, message: '✓ Visita actualizada' });
@@ -76,23 +76,23 @@ router.put('/visits/:id', (req, res) => {
 });
 
 // DELETE /api/admin/visits/:id
-router.delete('/visits/:id', (req, res) => {
+router.delete('/visits/:id', async (req, res) => {
   try {
-    const visit = db.findVisitById(req.params.id);
+    const visit = await db.findVisitById(req.params.id);
     if (!visit) return res.status(404).json({ error: 'Visita no encontrada' });
     if (visit.foto_path) {
       const fp = path.join(__dirname, '..', 'uploads', visit.foto_path);
       if (fs.existsSync(fp)) fs.unlinkSync(fp);
     }
-    db.deleteVisit(req.params.id);
+    await db.deleteVisit(req.params.id);
     res.json({ message: '✓ Visita eliminada' });
   } catch (err) { res.status(500).json({ error: 'Error al eliminar visita' }); }
 });
 
 // GET /api/admin/export/csv
-router.get('/export/csv', (req, res) => {
+router.get('/export/csv', async (req, res) => {
   try {
-    const visits = db.getAllVisits({});
+    const visits = await db.getAllVisits({});
     let csv = '\uFEFFID,Vendedor,Email,Fecha,Hora,Cliente,Dirección,Contacto,Descripción,Foto,Creación\n';
     visits.forEach(v => {
       csv += [v.id.substr(0, 8), `"${v.seller_name}"`, v.seller_email, v.fecha, v.hora || '',

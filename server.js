@@ -2,8 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// Load env vars
-require('./database'); // Initialize DB + tables
+require('dotenv').config();
+const db = require('./database'); 
+
+// Connect to MongoDB
+db.connectDB();
 
 const authRoutes = require('./routes/auth');
 const visitRoutes = require('./routes/visits');

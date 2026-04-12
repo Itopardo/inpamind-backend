@@ -8,11 +8,24 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => { const dir = path.join(__dirname, '..', 'uploads'); fs.mkdirSync(dir, { recursive: true }); cb(null, dir); },
-  filename: (req, file, cb) => { cb(null, `${Date.now()}-${Math.random().toString(36).substr(2, 8)}${path.extname(file.originalname) || '.jpg'}`); }
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
+
+// Configurar Cloudinary con variables de entorno (Render)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (req, file, cb) => { cb(null, file.mimetype.startsWith('image/')); } });
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'inpamind_visits',
+    allowed_formats: ['jpg', 'jpeg', 'png']
+  }
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 function saveBase64Photo(base64) {
   const data = base64.replace(/^data:image\/\w+;base64,/, '');
@@ -28,7 +41,7 @@ function deletePhoto(fotoPath) {
 }
 
 // POST /api/visits
-router.post('/', authMiddleware, upload.single('foto'), (req, res) => {
+router.post('/', authMiddleware, upload.single('foto'), async (req, res) => {
   try {
     const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion, foto_adicional_base64 } = req.body;
     if (!cliente || !direccion) return res.status(400).json({ error: 'Cliente y dirección son requeridos' });
@@ -36,16 +49,25 @@ router.post('/', authMiddleware, upload.single('foto'), (req, res) => {
     let fotoPath = null, fotoUrl = null;
     let fotoAdicionalPath = null, fotoAdicionalUrl = null;
 
-    if (req.file) { fotoPath = req.file.filename; fotoUrl = `/uploads/${req.file.filename}`; }
-    else if (req.body.foto_base64) { fotoPath = saveBase64Photo(req.body.foto_base64); fotoUrl = `/uploads/${fotoPath}`; }
+    if (req.file) { fotoPath = req.file.filename; fotoUrl = req.file.path; }
+    else if (req.body.foto_base64) {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(req.body.foto_base64, { folder: 'inpamind_visits' });
+        fotoPath = uploadResponse.public_id;
+        fotoUrl = uploadResponse.secure_url;
+      } catch(e) { console.error('Cloudinary error 1', e); }
+    }
 
     if (foto_adicional_base64) {
-      fotoAdicionalPath = saveBase64Photo(foto_adicional_base64);
-      fotoAdicionalUrl = `/uploads/${fotoAdicionalPath}`;
+      try {
+         const uploadResponse = await cloudinary.uploader.upload(foto_adicional_base64, { folder: 'inpamind_visits' });
+         fotoAdicionalPath = uploadResponse.public_id;
+         fotoAdicionalUrl = uploadResponse.secure_url;
+      } catch(e) { console.error('Cloudinary error 2', e); }
     }
 
     const now = new Date().toISOString();
-    const visit = db.createVisit({
+    const visit = await db.createVisit({
       id: uuidv4(), user_id: req.user.id, fecha: fecha || now.split('T')[0], hora: hora || '',
       hora_salida: hora_salida || '',
       cliente: cliente.trim(), direccion: direccion.trim(), 
@@ -61,17 +83,17 @@ router.post('/', authMiddleware, upload.single('foto'), (req, res) => {
 });
 
 // GET /api/visits
-router.get('/', authMiddleware, (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const visits = db.getVisitsByUser(req.user.id, req.query.search);
+    const visits = await db.getVisitsByUser(req.user.id, req.query.search);
     res.json({ visits, total: visits.length });
   } catch (err) { res.status(500).json({ error: 'Error al obtener visitas' }); }
 });
 
 // GET /api/visits/stats/me — Personal stats for vendedor dashboard
-router.get('/stats/me', authMiddleware, (req, res) => {
+router.get('/stats/me', authMiddleware, async (req, res) => {
   try {
-    const allVisits = db.getVisitsByUser(req.user.id);
+    const allVisits = await db.getVisitsByUser(req.user.id);
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -111,9 +133,9 @@ router.get('/stats/me', authMiddleware, (req, res) => {
 });
 
 // GET /api/visits/export/csv
-router.get('/export/csv', authMiddleware, (req, res) => {
+router.get('/export/csv', authMiddleware, async (req, res) => {
   try {
-    const visits = db.getVisitsByUser(req.user.id);
+    const visits = await db.getVisitsByUser(req.user.id);
     let csv = '\uFEFFID,Fecha,Hora,Cliente,Dirección,Contacto,Descripción,Tiene Foto,Fecha Creación\n';
     visits.forEach(v => {
       csv += [v.id.substr(0, 8), v.fecha, v.hora || '', `"${(v.cliente || '').replace(/"/g, '""')}"`,
@@ -128,31 +150,54 @@ router.get('/export/csv', authMiddleware, (req, res) => {
 });
 
 // GET /api/visits/:id
-router.get('/:id', authMiddleware, (req, res) => {
-  const visit = db.findVisitById(req.params.id);
+router.get('/:id', authMiddleware, async (req, res) => {
+  const visit = await db.findVisitById(req.params.id);
   if (!visit || visit.user_id !== req.user.id) return res.status(404).json({ error: 'Visita no encontrada' });
   res.json({ visit });
 });
 
 // PUT /api/visits/:id
-router.put('/:id', authMiddleware, upload.single('foto'), (req, res) => {
+router.put('/:id', authMiddleware, upload.single('foto'), async (req, res) => {
   try {
-    const visit = db.findVisitById(req.params.id);
+    const visit = await db.findVisitById(req.params.id);
     if (!visit || visit.user_id !== req.user.id) return res.status(404).json({ error: 'Visita no encontrada' });
 
     const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion, remove_photo, remove_foto_adicional, foto_adicional_base64 } = req.body;
     if (!cliente || !direccion) return res.status(400).json({ error: 'Cliente y dirección son requeridos' });
 
     let fotoPath = visit.foto_path, fotoUrl = visit.foto_url;
-    if (remove_photo === 'true') { deletePhoto(visit.foto_path); fotoPath = null; fotoUrl = null; }
-    if (req.file) { deletePhoto(visit.foto_path); fotoPath = req.file.filename; fotoUrl = `/uploads/${req.file.filename}`; }
-    else if (req.body.foto_base64) { deletePhoto(visit.foto_path); fotoPath = saveBase64Photo(req.body.foto_base64); fotoUrl = `/uploads/${fotoPath}`; }
+    if (remove_photo === 'true') { 
+      if (visit.foto_path) await cloudinary.uploader.destroy(visit.foto_path);
+      fotoPath = null; fotoUrl = null; 
+    }
+    else if (req.file) { 
+      if (visit.foto_path && visit.foto_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_path);
+      fotoPath = req.file.filename; fotoUrl = req.file.path; 
+    }
+    else if (req.body.foto_base64) { 
+      if (visit.foto_path && visit.foto_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_path);
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(req.body.foto_base64, { folder: 'inpamind_visits' });
+        fotoPath = uploadResponse.public_id;
+        fotoUrl = uploadResponse.secure_url;
+      } catch(e) {}
+    }
 
     let fotoAdicionalPath = visit.foto_adicional_path, fotoAdicionalUrl = visit.foto_adicional_url;
-    if (remove_foto_adicional === 'true') { deletePhoto(visit.foto_adicional_path); fotoAdicionalPath = null; fotoAdicionalUrl = null; }
-    if (foto_adicional_base64) { deletePhoto(visit.foto_adicional_path); fotoAdicionalPath = saveBase64Photo(foto_adicional_base64); fotoAdicionalUrl = `/uploads/${fotoAdicionalPath}`; }
+    if (remove_foto_adicional === 'true') { 
+      if (visit.foto_adicional_path) await cloudinary.uploader.destroy(visit.foto_adicional_path);
+      fotoAdicionalPath = null; fotoAdicionalUrl = null; 
+    }
+    else if (foto_adicional_base64) { 
+      if (visit.foto_adicional_path && visit.foto_adicional_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_adicional_path);
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(foto_adicional_base64, { folder: 'inpamind_visits' });
+        fotoAdicionalPath = uploadResponse.public_id;
+        fotoAdicionalUrl = uploadResponse.secure_url;
+      } catch(e) {}
+    }
 
-    const updated = db.updateVisit(req.params.id, { 
+    const updated = await db.updateVisit(req.params.id, { 
       fecha, hora: hora || '', hora_salida: hora_salida || '',
       cliente: cliente.trim(), direccion: direccion.trim(), 
       contacto: contacto?.trim() || '', cargo: cargo?.trim() || '',
@@ -166,11 +211,12 @@ router.put('/:id', authMiddleware, upload.single('foto'), (req, res) => {
 });
 
 // DELETE /api/visits/:id
-router.delete('/:id', authMiddleware, (req, res) => {
-  const visit = db.findVisitById(req.params.id);
+router.delete('/:id', authMiddleware, async (req, res) => {
+  const visit = await db.findVisitById(req.params.id);
   if (!visit || visit.user_id !== req.user.id) return res.status(404).json({ error: 'Visita no encontrada' });
-  deletePhoto(visit.foto_path);
-  db.deleteVisit(req.params.id);
+  if (visit.foto_path && visit.foto_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_path);
+  if (visit.foto_adicional_path && visit.foto_adicional_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_adicional_path);
+  await db.deleteVisit(req.params.id);
   res.json({ message: '✓ Visita eliminada' });
 });
 
