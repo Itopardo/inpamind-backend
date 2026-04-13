@@ -363,7 +363,7 @@ async function initNewForm() {
   document.getElementById('n-fecha').value = now.toISOString().split('T')[0];
   const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
   document.getElementById('n-hora-ingreso').value = timeStr;
-  
+
   document.getElementById('n-cliente').value = '';
   document.getElementById('n-hora-salida').value = '';
   document.getElementById('n-dir').value = '';
@@ -372,7 +372,7 @@ async function initNewForm() {
   document.getElementById('n-telefono').value = '';
   document.getElementById('n-mail').value = '';
   document.getElementById('n-desc').value = '';
-  
+
   removeFoto('ingreso');
   removeFoto('adicional');
 
@@ -416,13 +416,13 @@ function handleClientSearch() {
   const q = document.getElementById('n-cliente').value.toLowerCase();
   const listEl = document.getElementById('n-cliente-list');
   if (!q) { listEl.style.display = 'none'; return; }
-  
+
   const matches = knownClients.filter(c => c.cliente.toLowerCase().includes(q));
   if (!matches.length) {
-    listEl.style.display = 'none'; 
+    listEl.style.display = 'none';
     return;
   }
-  
+
   listEl.innerHTML = matches.map(c => `
     <div class="ac-item" onclick="selectClient('${esc(c.cliente)}')">
       <ion-icon name="business"></ion-icon> <div>${esc(c.cliente)}</div>
@@ -466,7 +466,7 @@ function handleContactSearch() {
   const cName = document.getElementById('n-cliente').value.toLowerCase().trim();
   const listEl = document.getElementById('n-contacto-list');
   if (!q && !cName) { listEl.style.display = 'none'; return; }
-  
+
   let matches = knownContacts;
   if (cName) {
     matches = matches.filter(c => c.cliente.toLowerCase() === cName);
@@ -474,12 +474,12 @@ function handleContactSearch() {
   if (q) {
     matches = matches.filter(c => c.contacto.toLowerCase().includes(q));
   }
-  
+
   if (!matches.length) {
-    listEl.style.display = 'none'; 
+    listEl.style.display = 'none';
     return;
   }
-  
+
   listEl.innerHTML = matches.map(c => `
     <div class="ac-item" onclick="selectContact('${esc(c.contacto)}')">
       <ion-icon name="person"></ion-icon> <div>${esc(c.contacto)}</div>
@@ -640,7 +640,7 @@ async function renderHistory() {
       const d = v.fecha ? new Date(v.fecha + 'T00:00:00') : new Date(v.created_at);
       return `${d.getFullYear()}-${d.getMonth()}`;
     }));
-    
+
     document.getElementById('st-total').textContent = visits.length;
     document.getElementById('st-clients').textContent = clients.size;
     document.getElementById('st-months').textContent = monthsSet.size;
@@ -668,7 +668,7 @@ function renderGroupedByClient(visits, isAdmin) {
     if (!groups[key]) groups[key] = [];
     groups[key].push(v);
   });
-  
+
   const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
   return sorted.map(([client, items]) => `
     <div class="gc-wrapper">
@@ -693,7 +693,7 @@ function renderGroupedByMonth(visits, isAdmin) {
     groups[key].items.push(v);
   });
   const sorted = Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-  
+
   return sorted.map(([, { label, items }]) => `
     <div class="gc-wrapper">
       <div class="gc-header" style="border-color:rgba(232,160,32,.2)">
@@ -712,8 +712,8 @@ function histExportCSV() {
 }
 
 function gcVisitCardHTML(v, showSeller) {
-  const photoTag = v.foto_url 
-    ? `<div class="gc-v-foot"><ion-icon name="camera" style="font-size:14px"></ion-icon> Con foto</div>` 
+  const photoTag = v.foto_url
+    ? `<div class="gc-v-foot"><ion-icon name="camera" style="font-size:14px"></ion-icon> Con foto</div>`
     : '';
 
   return `<div class="gc-visit" onclick="showDetail('${v.id}')" style="cursor:pointer">
@@ -721,14 +721,14 @@ function gcVisitCardHTML(v, showSeller) {
       <ion-icon name="create-outline" onclick="editVisit('${v.id}')"></ion-icon>
       <ion-icon name="trash-outline" onclick="deleteVisit('${v.id}')"></ion-icon>
     </div>
-    
+
     <div class="gc-v-row" style="margin-bottom:2px"><ion-icon name="calendar-outline"></ion-icon> ${v.fecha || 'Sin fecha'}</div>
     <div class="gc-v-row" style="margin-bottom:8px"><ion-icon name="time-outline"></ion-icon> ${(v.hora || 'Sin hora').substring(0,5)}</div>
-    
+
     ${v.direccion ? `<div class="gc-v-row"><ion-icon name="location-outline"></ion-icon> ${esc(v.direccion)}</div>` : ''}
     ${v.contacto ? `<div class="gc-v-row"><ion-icon name="person-outline"></ion-icon> ${esc(v.contacto)}</div>` : ''}
     ${showSeller && v.seller_name ? `<div class="gc-v-row" style="color:var(--amber)"><ion-icon name="person-circle-outline"></ion-icon> ${esc(v.seller_name)}</div>` : ''}
-    
+
     ${v.descripcion ? `<div class="gc-v-desc">${esc(v.descripcion)}</div>` : ''}
     ${photoTag}
   </div>`;
@@ -1083,4 +1083,32 @@ window.onload = async function () {
   let appReady;
   if (token) {
     try {
-      const data = await api('/api/
+      const data = await api('/api/auth/me');
+      currentUser = data.user;
+      appReady = 'authenticated';
+    } catch (e) {
+      token = null;
+      localStorage.removeItem('inpamind_token');
+      appReady = 'login';
+    }
+  } else {
+    appReady = 'login';
+  }
+
+  await splashDelay;
+  hideSplash();
+
+  if (appReady === 'authenticated') {
+    enterApp();
+  } else {
+    showScreen('s-login');
+  }
+};
+
+// Enter key on login/register
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const active = document.querySelector('.screen.active')?.id;
+  if (active === 's-login') doLogin();
+  else if (active === 's-register') doRegister();
+});
