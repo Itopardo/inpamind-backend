@@ -72,21 +72,35 @@ async function doLogin() {
   btn.disabled = false;
 }
 
-async function doRegister() {
-  const name = document.getElementById('r-name').value.trim();
-  const email = document.getElementById('r-email').value.trim();
-  const pass = document.getElementById('r-pass').value;
+// ── Crear Usuario (solo admin) ──
+function openCreateUser() {
+  const modal = document.getElementById('createUserModal');
+  modal.style.display = 'flex';
+  document.getElementById('cu-name').value = '';
+  document.getElementById('cu-email').value = '';
+  document.getElementById('cu-pass').value = '';
+  document.getElementById('cu-role').value = 'vendedor';
+  setTimeout(() => document.getElementById('cu-name').focus(), 100);
+}
+
+function closeCreateUser() {
+  document.getElementById('createUserModal').style.display = 'none';
+}
+
+async function submitCreateUser() {
+  const name = document.getElementById('cu-name').value.trim();
+  const email = document.getElementById('cu-email').value.trim();
+  const pass = document.getElementById('cu-pass').value;
+  const role = document.getElementById('cu-role').value;
   if (!name || !email || !pass) return toast('Completa todos los campos', 'err');
   if (pass.length < 6) return toast('La contraseña debe tener al menos 6 caracteres', 'err');
-  const btn = document.getElementById('btnRegister');
+  const btn = document.getElementById('btnCreateUser');
   btn.disabled = true;
   try {
-    const data = await api('/api/auth/register', { method: 'POST', body: { name, email, password: pass } });
-    token = data.token;
-    currentUser = data.user;
-    localStorage.setItem('inpamind_token', token);
-    enterApp();
-    toast('Cuenta creada ✅', 'ok');
+    const data = await api('/api/admin/users', { method: 'POST', body: { name, email, password: pass, role } });
+    toast(data.message, 'ok');
+    closeCreateUser();
+    loadAdminStats();
   } catch (e) {
     toast(e.message, 'err');
   }
@@ -1047,28 +1061,4 @@ window.onload = async function () {
       currentUser = data.user;
       appReady = 'authenticated';
     } catch (e) {
-      token = null;
-      localStorage.removeItem('inpamind_token');
-      appReady = 'login';
-    }
-  } else {
-    appReady = 'login';
-  }
-
-  await splashDelay;
-  hideSplash();
-
-  if (appReady === 'authenticated') {
-    enterApp();
-  } else {
-    showScreen('s-login');
-  }
-};
-
-// Enter key on login/register
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
-  const active = document.querySelector('.screen.active')?.id;
-  if (active === 's-login') doLogin();
-  else if (active === 's-register') doRegister();
-});
+      token =

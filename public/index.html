@@ -57,29 +57,8 @@
       <div class="inp-wrap"><ion-icon name="mail-outline"></ion-icon><input class="inp" id="l-email" type="email" placeholder="Correo electrónico" autocomplete="email"></div>
       <div class="inp-wrap" style="position:relative"><ion-icon name="lock-closed-outline"></ion-icon><input class="inp" id="l-pass" type="password" placeholder="Contraseña" autocomplete="current-password" style="padding-right:44px"><button type="button" class="eye-toggle" onclick="togglePass('l-pass',this)"><ion-icon name="eye-outline" style="font-size:18px"></ion-icon></button></div>
       <button class="btn-cyan" id="btnLogin" onclick="doLogin()" style="margin-top:6px">INICIAR SESIÓN</button>
-      <button class="btn-glass" onclick="showScreen('s-register')" style="margin-top:12px">CREAR CUENTA</button>
     </div>
     <p style="margin-top:auto;padding-top:32px;font-size:11px;color:var(--t50);letter-spacing:2px">INPAMIND © 2026</p>
-  </div>
-</div>
-
-<!-- ========== REGISTER ========== -->
-<div class="screen" id="s-register">
-  <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px 28px;min-height:100%">
-    <div style="text-align:center;margin-bottom:28px">
-      <div class="logo-card" style="display:inline-block;padding:16px 24px">
-        <img src="/logo-inpamind.png" alt="INPAMIND" style="height:40px;width:auto">
-      </div>
-    </div>
-    <h3 style="text-align:center;margin-bottom:4px;font-size:20px">Crear Cuenta</h3>
-    <p style="text-align:center;margin-bottom:24px;font-size:12px;color:var(--t70)">Registro de Vendedor</p>
-    <div style="width:100%;max-width:360px">
-      <div class="inp-wrap"><ion-icon name="person-outline"></ion-icon><input class="inp" id="r-name" placeholder="Nombre completo" autocomplete="name"></div>
-      <div class="inp-wrap"><ion-icon name="mail-outline"></ion-icon><input class="inp" id="r-email" type="email" placeholder="Correo electrónico" autocomplete="email"></div>
-      <div class="inp-wrap" style="position:relative"><ion-icon name="lock-closed-outline"></ion-icon><input class="inp" id="r-pass" type="password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="new-password" style="padding-right:44px"><button type="button" class="eye-toggle" onclick="togglePass('r-pass',this)"><ion-icon name="eye-outline" style="font-size:18px"></ion-icon></button></div>
-      <button class="btn-cyan" id="btnRegister" onclick="doRegister()" style="margin-top:6px">CREAR CUENTA</button>
-      <p style="text-align:center;margin-top:18px;font-size:13px;color:var(--t70)">¿Ya tienes cuenta? <a href="#" onclick="showScreen('s-login');return false" style="color:var(--cyan);font-weight:600;text-decoration:none">Inicia sesión</a></p>
-    </div>
   </div>
 </div>
 
@@ -263,12 +242,40 @@
   <div class="scroll" style="padding:0 16px 20px" id="e-content"></div>
 </div>
 
+<!-- ========== MODAL CREAR USUARIO ========== -->
+<div class="modal" id="createUserModal" style="display:none;align-items:flex-end;padding:0" onclick="if(event.target===this)closeCreateUser()">
+  <div style="background:#0C1A3A;border-radius:24px 24px 0 0;width:100%;max-width:480px;margin:0 auto;padding:28px 24px 40px;border-top:1px solid rgba(255,255,255,.1)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-size:18px;font-weight:800;letter-spacing:.5px">CREAR USUARIO</h3>
+      <button onclick="closeCreateUser()" style="background:rgba(255,255,255,.07);border:none;color:#fff;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div class="inp-wrap"><ion-icon name="person-outline"></ion-icon><input class="inp" id="cu-name" placeholder="Nombre completo" autocomplete="off"></div>
+    <div class="inp-wrap"><ion-icon name="mail-outline"></ion-icon><input class="inp" id="cu-email" type="email" placeholder="Correo electrónico" autocomplete="off"></div>
+    <div class="inp-wrap" style="position:relative"><ion-icon name="lock-closed-outline"></ion-icon><input class="inp" id="cu-pass" type="password" placeholder="Contraseña (mín. 6 caracteres)" style="padding-right:44px"><button type="button" class="eye-toggle" onclick="togglePass('cu-pass',this)"><ion-icon name="eye-outline" style="font-size:18px"></ion-icon></button></div>
+    <div class="inp-wrap" style="margin-bottom:20px">
+      <ion-icon name="shield-checkmark-outline"></ion-icon>
+      <select class="inp" id="cu-role" style="background:#0C1A3A;color:#fff;cursor:pointer">
+        <option value="vendedor">Vendedor</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+    <button class="btn-cyan" id="btnCreateUser" onclick="submitCreateUser()" style="margin-top:4px">
+      <ion-icon name="person-add-outline" style="font-size:18px;margin-right:6px"></ion-icon>CREAR USUARIO
+    </button>
+  </div>
+</div>
+
 <!-- ========== ADMIN - VENDEDORES ========== -->
 <div class="screen" id="s-admin">
   <div class="admin-hdr">
     <ion-icon name="people" style="font-size:22px;color:var(--amber)"></ion-icon>
     <h3>VENDEDORES</h3>
     <button class="btn-glass" style="width:auto;padding:6px 12px;font-size:11px;border-radius:20px" onclick="doLogout()"><ion-icon name="log-out-outline" style="font-size:14px"></ion-icon></button>
+  </div>
+  <div style="padding:12px 16px 0">
+    <button class="btn-cyan" onclick="openCreateUser()" style="height:44px;font-size:13px;letter-spacing:.5px">
+      <ion-icon name="person-add-outline" style="font-size:18px;margin-right:6px"></ion-icon>CREAR NUEVO USUARIO
+    </button>
   </div>
   <div class="scroll" style="padding:16px" id="admin-sellers-list"></div>
   <div class="tab-bar" id="tabBar4"></div>
@@ -284,13 +291,4 @@
   <div class="search-wrap"><ion-icon name="search-outline"></ion-icon><input id="sh-search" placeholder="Buscar en visitas del vendedor..." oninput="filterSellerHistory()"></div>
   <div style="display:flex;gap:16px;background:rgba(65,198,246,.1);border-radius:12px;padding:12px 16px;margin:0 16px 10px;font-size:12px;font-weight:600;align-items:center">
     <span style="display:flex;align-items:center;gap:4px"><ion-icon name="document-text" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="sh-total">0 visitas</span></span>
-    <span style="display:flex;align-items:center;gap:4px"><ion-icon name="people" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="sh-clients">0 clientes</span></span>
-  </div>
-  <div class="scroll" style="padding:0 16px 16px" id="sh-list"></div>
-</div>
-</div><!-- /app-frame -->
-
-<script src="/app.js?v=3"></script>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}</script>
-</body>
-</html>
+    <span style="disp
