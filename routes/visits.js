@@ -23,14 +23,25 @@ const storage = new CloudinaryStorage({
   params: {
     folder: 'inpamind_visits',
     allowed_formats: ['jpg', 'jpeg', 'png'],
-    transformation: [{ width: 1200, crop: 'limit', quality: 'auto' }]
+    transformation: [{ width: 1200, crop: 'limit' }]
   }
 });
 const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
-const uploadFields = upload.fields([
+const _uploadFields = upload.fields([
   { name: 'foto', maxCount: 1 },
   { name: 'foto_adicional', maxCount: 1 }
 ]);
+
+// Wrapper para capturar errores de multer/Cloudinary y devolver JSON
+function uploadFields(req, res, next) {
+  _uploadFields(req, res, (err) => {
+    if (err) {
+      console.error('Upload middleware error:', err.message, err.stack);
+      return res.status(500).json({ error: 'Error al subir la foto: ' + err.message });
+    }
+    next();
+  });
+}
 
 // POST /api/visits
 router.post('/', authMiddleware, uploadFields, async (req, res) => {
@@ -60,7 +71,7 @@ router.post('/', authMiddleware, uploadFields, async (req, res) => {
       created_at: now, updated_at: now
     });
     res.status(201).json({ visit, message: '✓ Visita guardada correctamente' });
-  } catch (err) { console.error('Create visit error:', err); res.status(500).json({ error: 'Error al guardar la visita' }); }
+  } catch (err) { console.error('Create visit error:', err.message, err.stack); res.status(500).json({ error: 'Error al guardar la visita: ' + err.message }); }
 });
 
 // GET /api/visits
