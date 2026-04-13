@@ -22,8 +22,8 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'inpamind_visits',
-    allowed_formats: ['jpg', 'jpeg', 'png'],
-    transformation: [{ width: 1200, crop: 'limit' }]
+    resource_type: 'image',
+    format: 'jpg'
   }
 });
 const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
@@ -202,3 +202,4 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
+                                                    
