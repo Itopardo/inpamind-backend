@@ -582,27 +582,26 @@ async function saveNewVisit() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin-right:6px"></div> Guardando...';
   try {
-    const body = {
-      fecha: document.getElementById('n-fecha').value,
-      hora: document.getElementById('n-hora-ingreso').value, // Legacy field binding
-      hora_salida: hSalida,
-      cliente, 
-      direccion: dir,
-      contacto,
-      cargo,
-      telefono: document.getElementById('n-telefono').value.trim(),
-      mail: document.getElementById('n-mail').value.trim(),
-      descripcion: document.getElementById('n-desc').value.trim()
-    };
-    if (fotoIngresoData) body.foto_base64 = fotoIngresoData;
-    if (fotoAdicionalData) body.foto_adicional_base64 = fotoAdicionalData;
+    const fd = new FormData();
+    fd.append('fecha', document.getElementById('n-fecha').value);
+    fd.append('hora', document.getElementById('n-hora-ingreso').value);
+    fd.append('hora_salida', hSalida);
+    fd.append('cliente', cliente);
+    fd.append('direccion', dir);
+    fd.append('contacto', contacto);
+    fd.append('cargo', cargo);
+    fd.append('telefono', document.getElementById('n-telefono').value.trim());
+    fd.append('mail', document.getElementById('n-mail').value.trim());
+    fd.append('descripcion', document.getElementById('n-desc').value.trim());
+    if (fotoIngresoData) fd.append('foto', dataURLtoBlob(fotoIngresoData), 'foto.jpg');
+    if (fotoAdicionalData) fd.append('foto_adicional', dataURLtoBlob(fotoAdicionalData), 'foto_adicional.jpg');
 
-    await api('/api/visits', { method: 'POST', body });
+    await api('/api/visits', { method: 'POST', body: fd });
     toast('✓ Visita guardada correctamente', 'ok');
-    
+
     // Reset and immediately redirect to History
     initNewForm();
-    switchTab(2); 
+    switchTab(2);
 
   } catch (e) {
     toast(e.message, 'err');
@@ -851,23 +850,23 @@ async function saveEdit(id) {
   const btn = document.getElementById('btnSaveEdit');
   btn.disabled = true;
   try {
-    const body = {
-      fecha: document.getElementById('e-fecha').value,
-      hora: document.getElementById('e-hora-ingreso').value,
-      hora_salida: document.getElementById('e-hora-salida').value.trim(),
-      cliente, direccion: dir,
-      contacto: document.getElementById('e-contacto').value.trim(),
-      cargo: document.getElementById('e-cargo').value.trim(),
-      telefono: document.getElementById('e-telefono').value.trim(),
-      mail: document.getElementById('e-mail').value.trim(),
-      descripcion: document.getElementById('e-desc').value.trim()
-    };
+    const fd = new FormData();
+    fd.append('fecha', document.getElementById('e-fecha').value);
+    fd.append('hora', document.getElementById('e-hora-ingreso').value);
+    fd.append('hora_salida', document.getElementById('e-hora-salida').value.trim());
+    fd.append('cliente', cliente);
+    fd.append('direccion', dir);
+    fd.append('contacto', document.getElementById('e-contacto').value.trim());
+    fd.append('cargo', document.getElementById('e-cargo').value.trim());
+    fd.append('telefono', document.getElementById('e-telefono').value.trim());
+    fd.append('mail', document.getElementById('e-mail').value.trim());
+    fd.append('descripcion', document.getElementById('e-desc').value.trim());
     if (editPhotoChanged) {
-      if (!editPhotoData) body.remove_photo = 'true';
-      else if (editPhotoData.startsWith('data:')) body.foto_base64 = editPhotoData;
+      if (!editPhotoData) fd.append('remove_photo', 'true');
+      else if (editPhotoData.startsWith('data:')) fd.append('foto', dataURLtoBlob(editPhotoData), 'foto.jpg');
     }
     const endpoint = currentUser.role === 'admin' ? `/api/admin/visits/${id}` : `/api/visits/${id}`;
-    await api(endpoint, { method: 'PUT', body });
+    await api(endpoint, { method: 'PUT', body: fd });
     toast('✓ Visita actualizada', 'ok');
     goBack();
   } catch (e) {
@@ -1036,6 +1035,16 @@ function showLoading(text) {
 function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
 
 // ── Image Compression ──
+function dataURLtoBlob(dataURL) {
+  const arr = dataURL.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new Blob([u8arr], { type: mime });
+}
+
 function compressImage(file, callback, maxW = 1200, quality = 0.8) {
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -1074,32 +1083,4 @@ window.onload = async function () {
   let appReady;
   if (token) {
     try {
-      const data = await api('/api/auth/me');
-      currentUser = data.user;
-      appReady = 'authenticated';
-    } catch (e) {
-      token = null;
-      localStorage.removeItem('inpamind_token');
-      appReady = 'login';
-    }
-  } else {
-    appReady = 'login';
-  }
-
-  await splashDelay;
-  hideSplash();
-
-  if (appReady === 'authenticated') {
-    enterApp();
-  } else {
-    showScreen('s-login');
-  }
-};
-
-// Enter key on login/register
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
-  const active = document.querySelector('.screen.active')?.id;
-  if (active === 's-login') doLogin();
-  else if (active === 's-register') doRegister();
-});
+      const data = await api('/api/
