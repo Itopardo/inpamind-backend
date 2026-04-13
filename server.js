@@ -35,6 +35,9 @@ app.use('/api/admin', adminRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', app: 'INPAMIND', version: '1.0.0' });
 });
+app.get('/api/health2', (req, res) => {
+  res.json({ status: 'superok', db: !!process.env.MONGODB_URI });
+});
 
 // SPA fallback — serve index.html for unmatched routes
 app.get('*', (req, res) => {
