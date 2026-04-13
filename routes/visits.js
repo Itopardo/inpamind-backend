@@ -22,58 +22,39 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'inpamind_visits',
-    allowed_formats: ['jpg', 'jpeg', 'png']
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 1200, crop: 'limit', quality: 'auto' }]
   }
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
-
-function saveBase64Photo(base64) {
-  const data = base64.replace(/^data:image\/\w+;base64,/, '');
-  const filename = `${Date.now()}-${Math.random().toString(36).substr(2, 8)}.jpg`;
-  fs.writeFileSync(path.join(__dirname, '..', 'uploads', filename), Buffer.from(data, 'base64'));
-  return filename;
-}
-
-function deletePhoto(fotoPath) {
-  if (!fotoPath) return;
-  const fp = path.join(__dirname, '..', 'uploads', fotoPath);
-  if (fs.existsSync(fp)) fs.unlinkSync(fp);
-}
+const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
+const uploadFields = upload.fields([
+  { name: 'foto', maxCount: 1 },
+  { name: 'foto_adicional', maxCount: 1 }
+]);
 
 // POST /api/visits
-router.post('/', authMiddleware, upload.single('foto'), async (req, res) => {
+router.post('/', authMiddleware, uploadFields, async (req, res) => {
   try {
-    const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion, foto_adicional_base64 } = req.body;
+    const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion } = req.body;
     if (!cliente || !direccion) return res.status(400).json({ error: 'Cliente y dirección son requeridos' });
 
     let fotoPath = null, fotoUrl = null;
     let fotoAdicionalPath = null, fotoAdicionalUrl = null;
 
-    if (req.file) { fotoPath = req.file.filename; fotoUrl = req.file.path; }
-    else if (req.body.foto_base64) {
-      try {
-        const uploadResponse = await cloudinary.uploader.upload(req.body.foto_base64, { folder: 'inpamind_visits' });
-        fotoPath = uploadResponse.public_id;
-        fotoUrl = uploadResponse.secure_url;
-      } catch(e) { console.error('Cloudinary error 1', e); }
-    }
+    const fotoFile = req.files?.['foto']?.[0];
+    const fotoAdicionalFile = req.files?.['foto_adicional']?.[0];
 
-    if (foto_adicional_base64) {
-      try {
-         const uploadResponse = await cloudinary.uploader.upload(foto_adicional_base64, { folder: 'inpamind_visits' });
-         fotoAdicionalPath = uploadResponse.public_id;
-         fotoAdicionalUrl = uploadResponse.secure_url;
-      } catch(e) { console.error('Cloudinary error 2', e); }
-    }
+    if (fotoFile) { fotoPath = fotoFile.filename; fotoUrl = fotoFile.path; }
+    if (fotoAdicionalFile) { fotoAdicionalPath = fotoAdicionalFile.filename; fotoAdicionalUrl = fotoAdicionalFile.path; }
 
     const now = new Date().toISOString();
     const visit = await db.createVisit({
       id: uuidv4(), user_id: req.user.id, fecha: fecha || now.split('T')[0], hora: hora || '',
       hora_salida: hora_salida || '',
-      cliente: cliente.trim(), direccion: direccion.trim(), 
-      contacto: contacto?.trim() || '', cargo: cargo?.trim() || '', 
+      cliente: cliente.trim(), direccion: direccion.trim(),
+      contacto: contacto?.trim() || '', cargo: cargo?.trim() || '',
       telefono: telefono?.trim() || '', mail: mail?.trim() || '',
-      descripcion: descripcion?.trim() || '', 
+      descripcion: descripcion?.trim() || '',
       foto_path: fotoPath, foto_url: fotoUrl,
       foto_adicional_path: fotoAdicionalPath, foto_adicional_url: fotoAdicionalUrl,
       created_at: now, updated_at: now
@@ -157,49 +138,38 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // PUT /api/visits/:id
-router.put('/:id', authMiddleware, upload.single('foto'), async (req, res) => {
+router.put('/:id', authMiddleware, uploadFields, async (req, res) => {
   try {
     const visit = await db.findVisitById(req.params.id);
     if (!visit || visit.user_id !== req.user.id) return res.status(404).json({ error: 'Visita no encontrada' });
 
-    const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion, remove_photo, remove_foto_adicional, foto_adicional_base64 } = req.body;
+    const { fecha, hora, hora_salida, cliente, direccion, contacto, cargo, telefono, mail, descripcion, remove_photo, remove_foto_adicional } = req.body;
     if (!cliente || !direccion) return res.status(400).json({ error: 'Cliente y dirección son requeridos' });
 
+    const fotoFile = req.files?.['foto']?.[0];
+    const fotoAdicionalFile = req.files?.['foto_adicional']?.[0];
+
     let fotoPath = visit.foto_path, fotoUrl = visit.foto_url;
-    if (remove_photo === 'true') { 
-      if (visit.foto_path) await cloudinary.uploader.destroy(visit.foto_path);
-      fotoPath = null; fotoUrl = null; 
-    }
-    else if (req.file) { 
-      if (visit.foto_path && visit.foto_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_path);
-      fotoPath = req.file.filename; fotoUrl = req.file.path; 
-    }
-    else if (req.body.foto_base64) { 
-      if (visit.foto_path && visit.foto_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_path);
-      try {
-        const uploadResponse = await cloudinary.uploader.upload(req.body.foto_base64, { folder: 'inpamind_visits' });
-        fotoPath = uploadResponse.public_id;
-        fotoUrl = uploadResponse.secure_url;
-      } catch(e) {}
+    if (remove_photo === 'true') {
+      if (visit.foto_path) await cloudinary.uploader.destroy(visit.foto_path).catch(() => {});
+      fotoPath = null; fotoUrl = null;
+    } else if (fotoFile) {
+      if (visit.foto_path) await cloudinary.uploader.destroy(visit.foto_path).catch(() => {});
+      fotoPath = fotoFile.filename; fotoUrl = fotoFile.path;
     }
 
     let fotoAdicionalPath = visit.foto_adicional_path, fotoAdicionalUrl = visit.foto_adicional_url;
-    if (remove_foto_adicional === 'true') { 
-      if (visit.foto_adicional_path) await cloudinary.uploader.destroy(visit.foto_adicional_path);
-      fotoAdicionalPath = null; fotoAdicionalUrl = null; 
-    }
-    else if (foto_adicional_base64) { 
-      if (visit.foto_adicional_path && visit.foto_adicional_path.includes('inpamind_visits')) await cloudinary.uploader.destroy(visit.foto_adicional_path);
-      try {
-        const uploadResponse = await cloudinary.uploader.upload(foto_adicional_base64, { folder: 'inpamind_visits' });
-        fotoAdicionalPath = uploadResponse.public_id;
-        fotoAdicionalUrl = uploadResponse.secure_url;
-      } catch(e) {}
+    if (remove_foto_adicional === 'true') {
+      if (visit.foto_adicional_path) await cloudinary.uploader.destroy(visit.foto_adicional_path).catch(() => {});
+      fotoAdicionalPath = null; fotoAdicionalUrl = null;
+    } else if (fotoAdicionalFile) {
+      if (visit.foto_adicional_path) await cloudinary.uploader.destroy(visit.foto_adicional_path).catch(() => {});
+      fotoAdicionalPath = fotoAdicionalFile.filename; fotoAdicionalUrl = fotoAdicionalFile.path;
     }
 
-    const updated = await db.updateVisit(req.params.id, { 
+    const updated = await db.updateVisit(req.params.id, {
       fecha, hora: hora || '', hora_salida: hora_salida || '',
-      cliente: cliente.trim(), direccion: direccion.trim(), 
+      cliente: cliente.trim(), direccion: direccion.trim(),
       contacto: contacto?.trim() || '', cargo: cargo?.trim() || '',
       telefono: telefono?.trim() || '', mail: mail?.trim() || '',
       descripcion: descripcion?.trim() || '',
