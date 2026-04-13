@@ -395,11 +395,15 @@ async function initNewForm() {
           cargo: v.cargo || '', telefono: v.telefono || '', mail: v.mail || ''
         };
       }
-      if (v.contacto && !pmap[v.contacto]) {
-        pmap[v.contacto] = {
-          contacto: v.contacto, cargo: v.cargo || '',
-          telefono: v.telefono || '', mail: v.mail || ''
-        };
+      if (v.contacto) {
+        const pKey = `${(v.cliente || '')}|${v.contacto}`;
+        if (!pmap[pKey]) {
+          pmap[pKey] = {
+            contacto: v.contacto, cargo: v.cargo || '',
+            telefono: v.telefono || '', mail: v.mail || '',
+            cliente: v.cliente || ''
+          };
+        }
       }
     }
     knownClients = Object.values(cmap);
@@ -459,10 +463,18 @@ function selectClient(name) {
 // -- Contact Autocomplete --
 function handleContactSearch() {
   const q = document.getElementById('n-contacto').value.toLowerCase();
+  const cName = document.getElementById('n-cliente').value.toLowerCase().trim();
   const listEl = document.getElementById('n-contacto-list');
-  if (!q) { listEl.style.display = 'none'; return; }
+  if (!q && !cName) { listEl.style.display = 'none'; return; }
   
-  const matches = knownContacts.filter(c => c.contacto.toLowerCase().includes(q));
+  let matches = knownContacts;
+  if (cName) {
+    matches = matches.filter(c => c.cliente.toLowerCase() === cName);
+  }
+  if (q) {
+    matches = matches.filter(c => c.contacto.toLowerCase().includes(q));
+  }
+  
   if (!matches.length) {
     listEl.style.display = 'none'; 
     return;
@@ -477,12 +489,17 @@ function handleContactSearch() {
 }
 
 function toggleContactList() {
+  const cName = document.getElementById('n-cliente').value.toLowerCase().trim();
   const listEl = document.getElementById('n-contacto-list');
   if (listEl.style.display === 'flex') {
     listEl.style.display = 'none';
   } else {
-    if (!knownContacts.length) return;
-    listEl.innerHTML = knownContacts.map(c => `
+    let matches = knownContacts;
+    if (cName) {
+      matches = matches.filter(c => c.cliente.toLowerCase() === cName);
+    }
+    if (!matches.length) return;
+    listEl.innerHTML = matches.map(c => `
       <div class="ac-item" onclick="selectContact('${esc(c.contacto)}')">
         <ion-icon name="person"></ion-icon> <div>${esc(c.contacto)}</div>
       </div>
@@ -1061,4 +1078,28 @@ window.onload = async function () {
       currentUser = data.user;
       appReady = 'authenticated';
     } catch (e) {
-      token =
+      token = null;
+      localStorage.removeItem('inpamind_token');
+      appReady = 'login';
+    }
+  } else {
+    appReady = 'login';
+  }
+
+  await splashDelay;
+  hideSplash();
+
+  if (appReady === 'authenticated') {
+    enterApp();
+  } else {
+    showScreen('s-login');
+  }
+};
+
+// Enter key on login/register
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const active = document.querySelector('.screen.active')?.id;
+  if (active === 's-login') doLogin();
+  else if (active === 's-register') doRegister();
+});
