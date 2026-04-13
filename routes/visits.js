@@ -13,9 +13,9 @@ const cloudinary = require('cloudinary').v2;
 
 // Configurar Cloudinary con variables de entorno (Render)
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dziicih4l',
+  api_key: process.env.CLOUDINARY_API_KEY || '399248129199696',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'wBhmJLljHuRR8FMXSM_H3D-yzfo'
 });
 
 const storage = new CloudinaryStorage({
