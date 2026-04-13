@@ -291,4 +291,13 @@
   <div class="search-wrap"><ion-icon name="search-outline"></ion-icon><input id="sh-search" placeholder="Buscar en visitas del vendedor..." oninput="filterSellerHistory()"></div>
   <div style="display:flex;gap:16px;background:rgba(65,198,246,.1);border-radius:12px;padding:12px 16px;margin:0 16px 10px;font-size:12px;font-weight:600;align-items:center">
     <span style="display:flex;align-items:center;gap:4px"><ion-icon name="document-text" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="sh-total">0 visitas</span></span>
-    <span style="disp
+    <span style="display:flex;align-items:center;gap:4px"><ion-icon name="people" style="font-size:14px;color:var(--cyan)"></ion-icon><span id="sh-clients">0 clientes</span></span>
+  </div>
+  <div class="scroll" style="padding:0 16px 16px" id="sh-list"></div>
+</div>
+</div><!-- /app-frame -->
+
+<script src="/app.js?v=4"></script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}</script>
+</body>
+</html>

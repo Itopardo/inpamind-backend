@@ -104,4 +104,31 @@ router.put('/visits/:id', async (req, res) => {
 router.delete('/visits/:id', async (req, res) => {
   try {
     const visit = await db.findVisitById(req.params.id);
-    if (!visit) return res.status(404).json({ error: 'V
+    if (!visit) return res.status(404).json({ error: 'Visita no encontrada' });
+    if (visit.foto_path) {
+      const fp = path.join(__dirname, '..', 'uploads', visit.foto_path);
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    }
+    await db.deleteVisit(req.params.id);
+    res.json({ message: '✓ Visita eliminada' });
+  } catch (err) { res.status(500).json({ error: 'Error al eliminar visita' }); }
+});
+
+// GET /api/admin/export/csv
+router.get('/export/csv', async (req, res) => {
+  try {
+    const visits = await db.getAllVisits({});
+    let csv = '\uFEFFID,Vendedor,Email,Fecha,Hora,Cliente,Dirección,Contacto,Descripción,Foto,Creación\n';
+    visits.forEach(v => {
+      csv += [v.id.substr(0, 8), `"${v.seller_name}"`, v.seller_email, v.fecha, v.hora || '',
+        `"${(v.cliente || '').replace(/"/g, '""')}"`, `"${(v.direccion || '').replace(/"/g, '""')}"`,
+        `"${(v.contacto || '').replace(/"/g, '""')}"`, `"${(v.descripcion || '').replace(/"/g, '""')}"`,
+        v.foto_url ? 'Sí' : 'No', v.created_at].join(',') + '\n';
+    });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=inpamind_todas_visitas.csv');
+    res.send(csv);
+  } catch (err) { res.status(500).json({ error: 'Error al exportar CSV' }); }
+});
+
+module.exports = router;
