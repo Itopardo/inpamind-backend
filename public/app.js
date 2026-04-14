@@ -749,7 +749,7 @@ async function showDetail(id) {
     }
     if (!v) return toast('Visita no encontrada', 'err');
     const el = document.getElementById('d-content');
-    const photoSrc = v.foto_url ? `${API}${v.foto_url}` : '';
+    const photoSrc = v.foto_url ? (v.foto_url.startsWith('http') ? v.foto_url : `${API}${v.foto_url}`) : '';
     el.innerHTML = `<div class="card" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:16px">
         <ion-icon name="business" style="font-size:24px;color:var(--cyan)"></ion-icon>
@@ -772,7 +772,7 @@ async function showDetail(id) {
       </div>
     </div>
     ${photoSrc ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="camera" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto de Ingreso</span></div><img src="${photoSrc}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
-    ${v.foto_adicional_url ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="images" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto Adicional</span></div><img src="${API}${v.foto_adicional_url}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
+    ${v.foto_adicional_url ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="images" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto Adicional</span></div><img src="${v.foto_adicional_url.startsWith('http') ? v.foto_adicional_url : API + v.foto_adicional_url}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
     <button class="btn-cyan" onclick="editVisit('${v.id}')" style="margin-bottom:10px"><ion-icon name="create-outline" style="font-size:18px"></ion-icon>EDITAR VISITA</button>
     <button class="btn-glass" onclick="deleteVisit('${v.id}')" style="border-color:rgba(255,68,68,.3);color:var(--danger)"><ion-icon name="trash-outline" style="font-size:18px"></ion-icon>ELIMINAR VISITA</button>`;
     showScreen('s-detail');
@@ -797,7 +797,7 @@ async function editVisit(id) {
       v = data.visit;
     }
     if (!v) return;
-    editPhotoData = v.foto_url ? `${API}${v.foto_url}` : null;
+    editPhotoData = v.foto_url ? (v.foto_url.startsWith('http') ? v.foto_url : `${API}${v.foto_url}`) : null;
     editPhotoChanged = false;
     const el = document.getElementById('e-content');
     el.innerHTML = `<div class="card">
