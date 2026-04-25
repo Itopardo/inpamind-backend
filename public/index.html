@@ -9,10 +9,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>INPAMIND - Gestión de Visitas</title>
 <link rel="manifest" href="/manifest.json">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/styles.css?v=3">
+<link rel="stylesheet" href="/styles.css?v=4">
 </head>
 <body>
 
@@ -108,7 +109,7 @@
         <div id="n-cliente-list" class="autocomplete-list" style="display:none"></div>
       </div>
 
-      <div class="field-wrap">
+s="field-wrap">
         <label>Hora de Ingreso (automático)</label>
         <div class="inp-box locked"><ion-icon name="time-outline"></ion-icon><input type="time" id="n-hora-ingreso" readonly><ion-icon name="lock-closed" class="inp-icon-end"></ion-icon></div>
       </div>
@@ -295,9 +296,190 @@
   </div>
   <div class="scroll" style="padding:0 16px 16px" id="sh-list"></div>
 </div>
-</div><!-- /app-frame -->
 
-<script src="/app.js?v=4"></script>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}</script>
-</body>
-</html>
+<!-- ========== LEVANTAMIENTO TÉCNICO ========== -->
+<div class="screen" id="s-levantamiento">
+  <div class="hdr" style="justify-content:center;padding:14px 16px;border-bottom:none">
+    <h3 style="text-align:center;text-transform:uppercase;letter-spacing:1px;font-weight:800;font-size:16px">LEVANTAMIENTO TÉCNICO</h3>
+  </div>
+  <div class="scroll lev-screen" style="padding:0 14px 20px">
+
+    <!-- Nº Visita -->
+    <div style="background:linear-gradient(135deg,#0d47a1,#1565a0);border-radius:10px;padding:14px 20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;">
+      <div style="font-size:22px;opacity:0.9;">📋</div>
+      <div style="flex:1">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;color:rgba(255,255,255,0.6);text-transform:uppercase;">Número de Visita</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1px;">Generado automáticamente</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.6);text-transform:uppercase;">VISITA</div>
+        <div id="lev-visita-display" style="font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:700;color:#fff;line-height:1;letter-spacing:2px;">—</div>
+      </div>
+      <input type="hidden" id="lev-visita">
+    </div>
+
+    <!-- Filtro + Empresa -->
+    <div class="lev-card" style="margin-bottom:12px;">
+      <div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-end;">
+        <div style="flex:0 0 auto;min-width:90px;">
+          <div class="lev-label">FILTRO N°</div>
+          <input class="lev-input" id="lev-filtro" type="number" min="1" placeholder="Auto" readonly autocomplete="off" style="font-size:22px;font-weight:700;color:#1565a0;text-align:center;background:#eef7fc;">
+        </div>
+        <div style="flex:1;">
+          <div class="lev-label">Nombre del Filtro</div>
+          <input class="lev-input" id="lev-nombreFiltro" type="text" placeholder="Nombre del filtro…" autocomplete="off">
+        </div>
+      </div>
+      <div style="margin-bottom:10px;position:relative;" id="lev-empresa-wrap">
+        <div class="lev-label">EMPRESA</div>
+        <input class="lev-input" id="lev-empresa" type="text" placeholder="Buscar empresa…" autocomplete="off" style="font-size:16px;font-weight:500;" oninput="lev_handleEmpresaSearch()">
+        <div id="lev-empresa-list" class="autocomplete-list" style="display:none;top:100%;left:0;right:0;"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div class="lev-label">CONTACTO</div>
+          <input class="lev-input" id="lev-contacto" type="text" placeholder="Contacto…" autocomplete="off">
+        </div>
+        <div style="flex:1;">
+          <div class="lev-label">CARGO</div>
+          <input class="lev-input" id="lev-cargo" type="text" placeholder="Cargo…" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagrama + Medidas -->
+    <div class="lev-card" style="margin-bottom:12px;">
+      <div style="display:flex;gap:10px;">
+        <!-- SVG Diagram -->
+        <div style="flex:0 0 70px;display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 220 500" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:70px;">
+            <rect x="38" y="18" width="124" height="12" rx="2" fill="#d0e8f5" stroke="#5aafd4" stroke-width="1.2"/>
+            <rect x="52" y="14" width="16" height="6" rx="1" fill="#e57373" stroke="#c62828" stroke-width="0.8"/>
+            <rect x="132" y="14" width="16" height="6" rx="1" fill="#e57373" stroke="#c62828" stroke-width="0.8"/>
+            <rect x="42" y="30" width="116" height="10" rx="1" fill="#b3d9f0" stroke="#2196c4" stroke-width="1.2"/>
+            <rect x="46" y="40" width="108" height="10" rx="1" fill="#cde8f7" stroke="#4db8e8" stroke-width="1"/>
+            <rect x="46" y="50" width="108" height="18" rx="0" fill="#e4f3fb" stroke="#5aafd4" stroke-width="1"/>
+            <line x1="54" y1="34" x2="146" y2="34" stroke="#2196c4" stroke-width="0.8" stroke-dasharray="6,4"/>
+            <line x1="54" y1="44" x2="146" y2="44" stroke="#2196c4" stroke-width="0.8" stroke-dasharray="6,4"/>
+            <rect x="46" y="68" width="108" height="332" rx="0" fill="#eef7fc" stroke="#2196c4" stroke-width="1.8"/>
+            <line x1="60" y1="68" x2="60" y2="400" stroke="#90cae4" stroke-width="1" stroke-dasharray="5,5"/>
+            <line x1="140" y1="68" x2="140" y2="400" stroke="#90cae4" stroke-width="1" stroke-dasharray="5,5"/>
+            <line x1="100" y1="14" x2="100" y2="460" stroke="#2196c4" stroke-width="1" stroke-dasharray="8,5"/>
+            <rect x="46" y="400" width="108" height="14" rx="0" fill="#cde8f7" stroke="#4db8e8" stroke-width="1"/>
+            <rect x="46" y="414" width="108" height="16" rx="0" fill="#b3d9f0" stroke="#2196c4" stroke-width="1.4"/>
+            <rect x="38" y="430" width="124" height="10" rx="2" fill="#d0e8f5" stroke="#5aafd4" stroke-width="1.2"/>
+            <line x1="170" y1="18" x2="170" y2="440" stroke="#5aafd4" stroke-width="1.3"/>
+            <line x1="154" y1="18" x2="172" y2="18" stroke="#5aafd4" stroke-width="1"/>
+            <line x1="154" y1="440" x2="172" y2="440" stroke="#5aafd4" stroke-width="1"/>
+            <polygon points="170,14 167,24 173,24" fill="#5aafd4"/>
+            <polygon points="170,444 167,434 173,434" fill="#5aafd4"/>
+            <text x="178" y="235" font-size="18" font-weight="700" fill="#1565a0" font-family="Barlow Condensed, sans-serif">A</text>
+            <line x1="38" y1="468" x2="162" y2="468" stroke="#5aafd4" stroke-width="1.3"/>
+            <line x1="38" y1="440" x2="38" y2="470" stroke="#5aafd4" stroke-width="1"/>
+            <line x1="162" y1="440" x2="162" y2="470" stroke="#5aafd4" stroke-width="1"/>
+            <polygon points="34,468 44,465 44,471" fill="#5aafd4"/>
+            <polygon points="166,468 156,465 156,471" fill="#5aafd4"/>
+            <text x="92" y="487" font-size="18" font-weight="700" fill="#1565a0" font-family="Barlow Condensed, sans-serif">B</text>
+            <line x1="22" y1="400" x2="22" y2="440" stroke="#5aafd4" stroke-width="1.3"/>
+            <line x1="22" y1="400" x2="48" y2="400" stroke="#5aafd4" stroke-width="1"/>
+            <line x1="22" y1="440" x2="48" y2="440" stroke="#5aafd4" stroke-width="1"/>
+            <polygon points="22,396 19,406 25,406" fill="#5aafd4"/>
+            <polygon points="22,444 19,434 25,434" fill="#5aafd4"/>
+            <text x="6" y="424" font-size="18" font-weight="700" fill="#1565a0" font-family="Barlow Condensed, sans-serif">C</text>
+          </svg>
+        </div>
+        <!-- Tabla medidas -->
+        <div style="flex:1;min-width:0;">
+          <div class="lev-meas-card">
+            <div class="lev-table-header">MEDIDAS</div>
+            <div class="lev-table-sub"><span>A</span><span>B</span><span>C</span></div>
+            <div class="lev-table-inputs">
+              <input id="lev-medA" type="text" placeholder="A" autocomplete="off">
+              <input id="lev-medB" type="text" placeholder="B" autocomplete="off">
+              <input id="lev-medC" type="text" placeholder="C" autocomplete="off">
+            </div>
+          </div>
+          <div class="lev-meas-card" style="margin-top:8px;">
+            <div class="lev-table-sub" style="grid-template-columns:1fr 1fr 1fr;">
+              <span>Diámetro</span><span>Temp.</span><span>Material</span>
+            </div>
+            <div class="lev-table-inputs">
+              <input id="lev-diametro" type="text" placeholder="ej.95mm" autocomplete="off">
+              <input id="lev-temperatura" type="text" placeholder="ej.200°C" autocomplete="off">
+              <input id="lev-material" type="text" placeholder="AISI304" autocomplete="off">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Observaciones -->
+      <div style="margin-top:10px;">
+        <div class="lev-label">OBSERVACIONES</div>
+        <textarea class="lev-obs" id="lev-observaciones" placeholder="Observaciones adicionales sobre la pieza…"></textarea>
+      </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+      <button class="lev-btn lev-btn-add" onclick="lev_agregarFiltro()">＋ Agregar</button>
+      <button class="lev-btn lev-btn-save" onclick="lev_guardarVisitaYForm()">💾 Guardar</button>
+      <button class="lev-btn lev-btn-excel" onclick="lev_exportarExcel()">📊 Excel</button>
+      <button class="lev-btn lev-btn-word" onclick="lev_generarInforme()">📄 Informe</button>
+      <button class="lev-btn lev-btn-nueva" onclick="lev_nuevaVisita()">✦ Nueva Visita</button>
+      <button class="lev-btn lev-btn-hist" onclick="lev_abrirHistorial()">🕘 Historial</button>
+    </div>
+
+    <!-- Panel filtros guardados -->
+    <div id="lev-filtros-panel" style="display:none;margin-bottom:12px;">
+      <div class="lev-card" style="padding:0;overflow:hidden;">
+        <div class="lev-table-header" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;">
+          <span>📋 FILTROS GUARDADOS</span>
+          <span id="lev-filtros-count" style="font-size:11px;font-weight:400;opacity:0.8;"></span>
+        </div>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+          <table class="lev-filtros-table">
+            <thead>
+              <tr>
+                <th>N°</th><th>Nombre</th><th>Empresa</th><th>A</th><th>B</th><th>C</th><th>Diám.</th><th>Temp.</th><th>Material</th><th>Obs.</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="lev-filtros-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+  <div class="tab-bar" id="tabBar5"></div>
+</div>
+
+<!-- ========== LEV: HISTORIAL OVERLAY ========== -->
+<div id="lev-pagina-historial" style="display:none;position:fixed;inset:0;background:#f0f4f8;z-index:9999;overflow-y:auto;">
+  <div style="background:#0C1A3A;border-bottom:3px solid #2196c4;padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1;">
+    <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:2px;color:#fff;text-transform:uppercase;">Historial de Visitas</h3>
+    <button onclick="lev_cerrarHistorial()" style="margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;padding:8px 16px;border-radius:5px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;cursor:pointer;">✕ Cerrar</button>
+  </div>
+  <div style="max-width:760px;margin:20px auto;padding:0 16px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#2196c4;margin-bottom:12px;">Visitas Registradas</div>
+    <div id="lev-historial-lista"></div>
+  </div>
+</div>
+
+<!-- ========== LEV: MODAL DETALLE VISITA ========== -->
+<div id="lev-modal-visita" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;overflow-y:auto;">
+  <div style="max-width:760px;margin:28px auto 28px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.22);">
+    <div style="background:linear-gradient(135deg,#0d47a1,#2196c4);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:3px;">Detalle de Visita</div>
+        <div id="lev-modal-titulo" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:2px;"></div>
+      </div>
+      <button onclick="lev_cerrarModal()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:18px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="padding:20px 24px;" id="lev-modal-body"></div>
+    <div style="padding:12px 24px;border-top:1px solid #e0e0e0;display:flex;gap:10px;justify-content:flex-end;background:#f9fafb;">
+      <button onclick="lev_cargarVisitaEnFormulario()" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:1.5px;padding:9px 20px;border-radius:5px;border:none;cursor:pointer;background:#2196c4;color:#fff;">✎ Editar</button>
+      <button onclick="lev_cerrarModal()" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:1.5px;padding:9px 20px;border-radius:5px;cursor:pointer;border:1px solid #ccc;background:#fff;color:#666;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+</d
