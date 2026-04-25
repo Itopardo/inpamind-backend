@@ -238,3 +238,246 @@ label.lbl{display:flex;align-items:center;gap:4px;color:var(--t70);font-size:12p
 @media(min-width:1200px){
   #app-frame{max-width:414px !important;height:85vh !important;max-height:900px !important}
 }
+
+/* ═════════════════════════════════════════════════════
+   LEVANTAMIENTO TÉCNICO — Estilos scoped .lev-screen
+   ══════════════════════════════════════════════════════ */
+
+/* Cards */
+.lev-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #cfd8dc;
+  box-shadow: 0 2px 12px rgba(33,150,196,0.06);
+  padding: 16px;
+}
+
+/* Labels */
+.lev-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #2196c4;
+  margin-bottom: 5px;
+}
+
+/* Inputs */
+.lev-input {
+  width: 100%;
+  border: none;
+  border-bottom: 2px solid #2196c4;
+  padding: 7px 4px;
+  font-size: 14px;
+  font-family: 'Barlow', 'Inter', sans-serif;
+  color: #1a2535;
+  background: transparent;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.lev-input:focus { border-color: #1565a0; }
+.lev-input::placeholder { color: #b0bec5; font-size: 13px; }
+
+/* Measurements card */
+.lev-meas-card {
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #cfd8dc;
+  overflow: hidden;
+}
+
+.lev-table-header {
+  background: #b3d9f0;
+  padding: 8px 14px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #1565a0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.lev-table-sub {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background: #daeef9;
+  border-bottom: 1px solid #cfd8dc;
+}
+.lev-table-sub span {
+  padding: 6px 8px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #1565a0;
+  text-align: center;
+  border-right: 1px solid #cfd8dc;
+}
+.lev-table-sub span:last-child { border-right: none; }
+
+.lev-table-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.lev-table-inputs input {
+  border: none;
+  border-right: 1px solid #cfd8dc;
+  padding: 9px 8px;
+  font-size: 13px;
+  font-family: 'Barlow', 'Inter', sans-serif;
+  color: #1a2535;
+  text-align: center;
+  background: #fff;
+  width: 100%;
+  outline: none;
+  transition: background 0.15s;
+  -webkit-appearance: none;
+}
+.lev-table-inputs input:last-child { border-right: none; }
+.lev-table-inputs input:focus { background: #e8f5ff; }
+.lev-table-inputs input::placeholder { color: #b0bec5; font-size: 11px; }
+
+/* Observaciones */
+.lev-obs {
+  width: 100%;
+  border: 1px solid #cfd8dc;
+  border-radius: 5px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: 'Barlow', 'Inter', sans-serif;
+  color: #1a2535;
+  background: #fff;
+  resize: vertical;
+  min-height: 62px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.lev-obs:focus { border-color: #2196c4; }
+.lev-obs::placeholder { color: #b0bec5; }
+
+/* Action buttons */
+.lev-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 10px 8px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.lev-btn-add  { background: linear-gradient(135deg,#0d47a1,#2196c4); color:#fff; }
+.lev-btn-save { background: linear-gradient(135deg,#1a6b3a,#2e9e57); color:#fff; }
+.lev-btn-excel{ background: linear-gradient(135deg,#1a6b3a,#2e9e57); color:#fff; }
+.lev-btn-word { background: linear-gradient(135deg,#e65100,#f57c00); color:#fff; }
+.lev-btn-nueva{ background: transparent; color:#607d8b; border:1.5px solid #cfd8dc; }
+.lev-btn-hist { background: linear-gradient(135deg,#4a148c,#7b1fa2); color:#fff; }
+.lev-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+/* Filtros table */
+.lev-filtros-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Barlow', 'Inter', sans-serif;
+  font-size: 12px;
+}
+.lev-filtros-table thead tr {
+  background: #daeef9;
+}
+.lev-filtros-table th {
+  padding: 8px 10px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #1565a0;
+  border-right: 1px solid #cfd8dc;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.lev-filtros-table th:last-child { border-right: none; }
+.lev-filtro-row { border-bottom: 1px solid #cfd8dc; transition: background 0.12s; }
+.lev-filtro-row:hover { background: #f0f8ff; }
+.lev-filtro-row:last-child { border-bottom: none; }
+.lev-filtro-row td {
+  padding: 8px 10px;
+  color: #1a2535;
+  border-right: 1px solid #cfd8dc;
+  vertical-align: middle;
+}
+.lev-filtro-row td:last-child { border-right: none; }
+
+.lev-num-badge {
+  display: inline-block;
+  background: #2196c4;
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 2px 9px;
+  border-radius: 10px;
+  min-width: 28px;
+  text-align: center;
+}
+
+.lev-btn-cargar {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  background: #2196c4;
+  color: #fff;
+  margin-right: 4px;
+  transition: background 0.12s;
+}
+.lev-btn-cargar:hover { background: #1565a0; }
+.lev-btn-eliminar {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 4px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  color: #c62828;
+  border: 1px solid #e57373;
+  transition: all 0.12s;
+}
+.lev-btn-eliminar:hover { background: #fdecea; }
+
+/* Historial cards */
+.lev-visita-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #cfd8dc;
+  box-shadow: 0 2px 10px rgba(33,150,196,0.06);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.lev-visita-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+.lev-visita-num-badge {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  background: linear-gradient(135deg,#1565a0,#2196c4);
+  border-radius: 7px;
+  padding: 4px 12px;
+  letter-spacing: 1.5px;
+  flex-shrink: 0;
+}
