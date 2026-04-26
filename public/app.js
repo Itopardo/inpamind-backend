@@ -49,7 +49,7 @@ function showScreen(id) {
 function goBack() {
   if (navHistory.length > 0) showScreen(navHistory.pop());
   else if (currentUser?.role === 'admin') switchTab(3);
-  else switchTab(2);
+  else switchTab(3);
 }
 
 // ── Auth ──
@@ -186,7 +186,7 @@ function renderHomeDashboard() {
         <div style="height:160px;position:relative"><canvas id="vendedorChart"></canvas></div>
       </div>
       <button class="btn-cyan" style="margin-bottom:12px" onclick="switchTab(1)"><ion-icon name="add-circle-outline" style="font-size:22px"></ion-icon>NUEVA VISITA</button>
-      <button class="btn-glass" onclick="switchTab(2)"><ion-icon name="time-outline" style="font-size:20px"></ion-icon>HISTORIAL DE VISITAS</button>
+      <button class="btn-glass" onclick="switchTab(3)"><ion-icon name="time-outline" style="font-size:20px"></ion-icon>HISTORIAL DE VISITAS</button>
     `;
     loadVendedorStats();
   }
@@ -317,6 +317,7 @@ function initTabs() {
   const vendedorTabs = [
     { icon: 'home', label: 'Inicio', screen: 's-home' },
     { icon: 'add-circle', label: 'Nueva', screen: 's-nueva' },
+    { icon: 'document-text', label: 'Levant.', screen: 's-levantamiento' },
     { icon: 'list', label: 'Historial', screen: 's-hist' }
   ];
   const adminTabs = [
@@ -325,7 +326,7 @@ function initTabs() {
     { icon: 'shield-checkmark', label: 'Admin', screen: 's-admin' }
   ];
   const tabs = currentUser?.role === 'admin' ? adminTabs : vendedorTabs;
-  const ids = ['tabBar', 'tabBar2', 'tabBar3', 'tabBar4'];
+  const ids = ['tabBar', 'tabBar2', 'tabBar3', 'tabBar4', 'tabBar5'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -334,7 +335,7 @@ function initTabs() {
 }
 
 function switchTab(i) {
-  const vendedorSc = ['s-home', 's-nueva', 's-hist'];
+  const vendedorSc = ['s-home', 's-nueva', 's-levantamiento', 's-hist'];
   const adminSc = ['s-home', 's-hist', 's-admin'];
   const screens = currentUser?.role === 'admin' ? adminSc : vendedorSc;
   if (i >= screens.length) return;
@@ -345,6 +346,7 @@ function switchTab(i) {
   });
   if (screens[i] === 's-hist') renderHistory();
   if (screens[i] === 's-nueva') initNewForm();
+  if (screens[i] === 's-levantamiento') lev_init();
   if (screens[i] === 's-home') {
     if (currentUser?.role === 'admin') loadAdminHomeDashboard();
     else loadVendedorStats();
@@ -363,7 +365,7 @@ async function initNewForm() {
   document.getElementById('n-fecha').value = now.toISOString().split('T')[0];
   const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
   document.getElementById('n-hora-ingreso').value = timeStr;
-
+  
   document.getElementById('n-cliente').value = '';
   document.getElementById('n-hora-salida').value = '';
   document.getElementById('n-dir').value = '';
@@ -372,7 +374,7 @@ async function initNewForm() {
   document.getElementById('n-telefono').value = '';
   document.getElementById('n-mail').value = '';
   document.getElementById('n-desc').value = '';
-
+  
   removeFoto('ingreso');
   removeFoto('adicional');
 
@@ -416,13 +418,13 @@ function handleClientSearch() {
   const q = document.getElementById('n-cliente').value.toLowerCase();
   const listEl = document.getElementById('n-cliente-list');
   if (!q) { listEl.style.display = 'none'; return; }
-
+  
   const matches = knownClients.filter(c => c.cliente.toLowerCase().includes(q));
   if (!matches.length) {
-    listEl.style.display = 'none';
+    listEl.style.display = 'none'; 
     return;
   }
-
+  
   listEl.innerHTML = matches.map(c => `
     <div class="ac-item" onclick="selectClient('${esc(c.cliente)}')">
       <ion-icon name="business"></ion-icon> <div>${esc(c.cliente)}</div>
@@ -466,7 +468,7 @@ function handleContactSearch() {
   const cName = document.getElementById('n-cliente').value.toLowerCase().trim();
   const listEl = document.getElementById('n-contacto-list');
   if (!q && !cName) { listEl.style.display = 'none'; return; }
-
+  
   let matches = knownContacts;
   if (cName) {
     matches = matches.filter(c => c.cliente.toLowerCase() === cName);
@@ -474,12 +476,12 @@ function handleContactSearch() {
   if (q) {
     matches = matches.filter(c => c.contacto.toLowerCase().includes(q));
   }
-
+  
   if (!matches.length) {
-    listEl.style.display = 'none';
+    listEl.style.display = 'none'; 
     return;
   }
-
+  
   listEl.innerHTML = matches.map(c => `
     <div class="ac-item" onclick="selectContact('${esc(c.contacto)}')">
       <ion-icon name="person"></ion-icon> <div>${esc(c.contacto)}</div>
@@ -601,7 +603,7 @@ async function saveNewVisit() {
 
     // Reset and immediately redirect to History
     initNewForm();
-    switchTab(2);
+    switchTab(3);
 
   } catch (e) {
     toast(e.message, 'err');
@@ -640,7 +642,7 @@ async function renderHistory() {
       const d = v.fecha ? new Date(v.fecha + 'T00:00:00') : new Date(v.created_at);
       return `${d.getFullYear()}-${d.getMonth()}`;
     }));
-
+    
     document.getElementById('st-total').textContent = visits.length;
     document.getElementById('st-clients').textContent = clients.size;
     document.getElementById('st-months').textContent = monthsSet.size;
@@ -668,7 +670,7 @@ function renderGroupedByClient(visits, isAdmin) {
     if (!groups[key]) groups[key] = [];
     groups[key].push(v);
   });
-
+  
   const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
   return sorted.map(([client, items]) => `
     <div class="gc-wrapper">
@@ -693,7 +695,7 @@ function renderGroupedByMonth(visits, isAdmin) {
     groups[key].items.push(v);
   });
   const sorted = Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-
+  
   return sorted.map(([, { label, items }]) => `
     <div class="gc-wrapper">
       <div class="gc-header" style="border-color:rgba(232,160,32,.2)">
@@ -712,8 +714,8 @@ function histExportCSV() {
 }
 
 function gcVisitCardHTML(v, showSeller) {
-  const photoTag = v.foto_url
-    ? `<div class="gc-v-foot"><ion-icon name="camera" style="font-size:14px"></ion-icon> Con foto</div>`
+  const photoTag = v.foto_url 
+    ? `<div class="gc-v-foot"><ion-icon name="camera" style="font-size:14px"></ion-icon> Con foto</div>` 
     : '';
 
   return `<div class="gc-visit" onclick="showDetail('${v.id}')" style="cursor:pointer">
@@ -721,14 +723,14 @@ function gcVisitCardHTML(v, showSeller) {
       <ion-icon name="create-outline" onclick="editVisit('${v.id}')"></ion-icon>
       <ion-icon name="trash-outline" onclick="deleteVisit('${v.id}')"></ion-icon>
     </div>
-
+    
     <div class="gc-v-row" style="margin-bottom:2px"><ion-icon name="calendar-outline"></ion-icon> ${v.fecha || 'Sin fecha'}</div>
     <div class="gc-v-row" style="margin-bottom:8px"><ion-icon name="time-outline"></ion-icon> ${(v.hora || 'Sin hora').substring(0,5)}</div>
-
+    
     ${v.direccion ? `<div class="gc-v-row"><ion-icon name="location-outline"></ion-icon> ${esc(v.direccion)}</div>` : ''}
     ${v.contacto ? `<div class="gc-v-row"><ion-icon name="person-outline"></ion-icon> ${esc(v.contacto)}</div>` : ''}
     ${showSeller && v.seller_name ? `<div class="gc-v-row" style="color:var(--amber)"><ion-icon name="person-circle-outline"></ion-icon> ${esc(v.seller_name)}</div>` : ''}
-
+    
     ${v.descripcion ? `<div class="gc-v-desc">${esc(v.descripcion)}</div>` : ''}
     ${photoTag}
   </div>`;
@@ -1112,3 +1114,510 @@ document.addEventListener('keydown', (e) => {
   if (active === 's-login') doLogin();
   else if (active === 's-register') doRegister();
 });
+
+// ══════════════════════════════════════════════════════════════
+//  LEVANTAMIENTO TÉCNICO — Funciones lev_*
+// ══════════════════════════════════════════════════════════════
+
+const LEV_FIELDS = ['lev-visita','lev-filtro','lev-nombreFiltro','lev-empresa','lev-contacto','lev-cargo','lev-medA','lev-medB','lev-medC','lev-diametro','lev-temperatura','lev-material','lev-observaciones'];
+
+function lev_getVisitas() {
+  try { return JSON.parse(localStorage.getItem('lev_historial') || '[]'); }
+  catch(e) { return []; }
+}
+
+function lev_getFiltros() {
+  try { return JSON.parse(localStorage.getItem('lev_filtros')) || []; }
+  catch(e) { return []; }
+}
+
+function lev_asignarVisita() {
+  const visitas = lev_getVisitas();
+  const siguiente = visitas.length > 0
+    ? Math.max(...visitas.map(v => parseInt(v.numero) || 0)) + 1
+    : 1;
+  const el = document.getElementById('lev-visita');
+  const disp = document.getElementById('lev-visita-display');
+  if (el) el.value = siguiente;
+  if (disp) disp.textContent = String(siguiente).padStart(3, '0');
+  return siguiente;
+}
+
+function lev_init() {
+  // Cargar clientes conocidos si aún no están disponibles
+  if (!knownClients.length) {
+    api('/api/visits').then(data => {
+      const cmap = {};
+      (data.visits || []).forEach(v => {
+        if (v.cliente && !cmap[v.cliente]) {
+          cmap[v.cliente] = { cliente: v.cliente, contacto: v.contacto || '', cargo: v.cargo || '', direccion: v.direccion || '', telefono: v.telefono || '', mail: v.mail || '' };
+        }
+      });
+      knownClients = Object.values(cmap);
+    }).catch(() => {});
+  }
+
+  // Restaurar form guardado
+  const saved = localStorage.getItem('lev_form');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      LEV_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && data[id] !== undefined) el.value = data[id];
+      });
+    } catch(e) {}
+  }
+  lev_renderFiltros();
+
+  // Número de visita
+  const elVisita = document.getElementById('lev-visita');
+  if (elVisita && !elVisita.value) {
+    lev_asignarVisita();
+  } else if (elVisita) {
+    const disp = document.getElementById('lev-visita-display');
+    if (disp) disp.textContent = String(elVisita.value).padStart(3, '0');
+  }
+
+  // Número de filtro siguiente
+  const lista = lev_getFiltros();
+  const siguiente = lista.length > 0 ? Math.max(...lista.map(f => parseInt(f['lev-filtro']) || 0)) + 1 : 1;
+  const elFiltro = document.getElementById('lev-filtro');
+  if (elFiltro && !elFiltro.value) elFiltro.value = siguiente;
+
+  // Sincronizar empresa en filtros al escribir
+  ['lev-empresa','lev-contacto','lev-cargo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.removeEventListener('input', lev_sincronizarEmpresa); el.addEventListener('input', lev_sincronizarEmpresa); }
+  });
+}
+
+function lev_sincronizarEmpresa() {
+  const empresa  = (document.getElementById('lev-empresa')?.value  || '').trim();
+  const contacto = (document.getElementById('lev-contacto')?.value || '').trim();
+  const cargo    = (document.getElementById('lev-cargo')?.value    || '').trim();
+  const lista = lev_getFiltros().map(f => ({ ...f, 'lev-empresa': empresa, 'lev-contacto': contacto, 'lev-cargo': cargo }));
+  localStorage.setItem('lev_filtros', JSON.stringify(lista));
+  lev_renderFiltros();
+}
+
+function lev_agregarFiltro() {
+  const data = {};
+  LEV_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  data['lev-empresa']  = (document.getElementById('lev-empresa')?.value  || '').trim();
+  data['lev-contacto'] = (document.getElementById('lev-contacto')?.value || '').trim();
+  data['lev-cargo']    = (document.getElementById('lev-cargo')?.value    || '').trim();
+
+  const lista = lev_getFiltros();
+  const siguienteNum = lista.length > 0 ? Math.max(...lista.map(f => parseInt(f['lev-filtro']) || 0)) + 1 : 1;
+  data['lev-filtro'] = siguienteNum;
+  const elFiltro = document.getElementById('lev-filtro');
+  if (elFiltro) elFiltro.value = siguienteNum;
+
+  if (!data['lev-nombreFiltro'] && !data['lev-empresa']) {
+    toast('Completa al menos el nombre del filtro o la empresa', 'err');
+    return;
+  }
+
+  data._id = Date.now();
+  data.fecha = new Date().toLocaleString('es-CL');
+  lista.push(data);
+  localStorage.setItem('lev_filtros', JSON.stringify(lista));
+
+  const nextNum = siguienteNum + 1;
+  if (elFiltro) elFiltro.value = nextNum;
+
+  lev_renderFiltros();
+  toast('＋ Filtro agregado a la lista', 'ok');
+}
+
+function lev_renderFiltros() {
+  const lista = lev_getFiltros();
+  const panel = document.getElementById('lev-filtros-panel');
+  const tbody = document.getElementById('lev-filtros-tbody');
+  const count = document.getElementById('lev-filtros-count');
+  if (!panel) return;
+  if (lista.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  if (count) count.textContent = lista.length + ' ficha' + (lista.length !== 1 ? 's' : '');
+  if (tbody) tbody.innerHTML = lista.map(f => `
+    <tr class="lev-filtro-row">
+      <td><span class="lev-num-badge">${f['lev-filtro'] || '—'}</span></td>
+      <td><strong>${f['lev-nombreFiltro'] || '—'}</strong></td>
+      <td>${f['lev-empresa'] || '—'}</td>
+      <td style="text-align:center">${f['lev-medA'] || '—'}</td>
+      <td style="text-align:center">${f['lev-medB'] || '—'}</td>
+      <td style="text-align:center">${f['lev-medC'] || '—'}</td>
+      <td>${f['lev-diametro'] || '—'}</td>
+      <td>${f['lev-temperatura'] || '—'}</td>
+      <td>${f['lev-material'] || '—'}</td>
+      <td style="max-width:150px;white-space:pre-wrap;font-size:11px;color:#607d8b;">${f['lev-observaciones'] || '—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="lev-btn-cargar" onclick="lev_cargarFiltro(${f._id})">✎ Cargar</button>
+        <button class="lev-btn-eliminar" onclick="lev_eliminarFiltro(${f._id})">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function lev_cargarFiltro(id) {
+  const item = lev_getFiltros().find(f => f._id === id);
+  if (!item) return;
+  LEV_FIELDS.forEach(fid => {
+    const el = document.getElementById(fid);
+    if (el && item[fid] !== undefined) el.value = item[fid];
+  });
+  document.querySelector('#s-levantamiento .scroll').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function lev_eliminarFiltro(id) {
+  if (!confirm('¿Eliminar este filtro de la lista?')) return;
+  const lista = lev_getFiltros().filter(f => f._id !== id);
+  localStorage.setItem('lev_filtros', JSON.stringify(lista));
+  lev_renderFiltros();
+  toast('🗑 Filtro eliminado', 'err');
+}
+
+function lev_guardarVisitaYForm() {
+  const lista = lev_getFiltros();
+  if (lista.length === 0) {
+    toast('Agrega al menos un filtro antes de guardar', 'err');
+    return;
+  }
+  const data = {};
+  LEV_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  localStorage.setItem('lev_form', JSON.stringify(data));
+
+  const nVisita = data['lev-visita'] ? String(data['lev-visita']).padStart(3,'0') : '001';
+  const visita = {
+    numero: nVisita,
+    empresa:  data['lev-empresa']  || '',
+    contacto: data['lev-contacto'] || '',
+    cargo:    data['lev-cargo']    || '',
+    fecha:    new Date().toLocaleString('es-CL'),
+    filtros:  lista,
+    form:     data
+  };
+
+  let historial = lev_getVisitas();
+  const idx = historial.findIndex(v => v.numero === nVisita);
+  if (idx >= 0) historial[idx] = visita;
+  else historial.push(visita);
+  historial.sort((a,b) => parseInt(b.numero) - parseInt(a.numero));
+  localStorage.setItem('lev_historial', JSON.stringify(historial));
+  toast('💾 Visita guardada en historial', 'ok');
+}
+
+function lev_nuevaVisita() {
+  if (!confirm('¿Iniciar una nueva visita? Se limpiarán todos los campos y filtros del formulario actual.')) return;
+  localStorage.removeItem('lev_filtros');
+  localStorage.removeItem('lev_form');
+  LEV_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const historial = lev_getVisitas();
+  const siguiente = historial.length > 0
+    ? Math.max(...historial.map(v => parseInt(v.numero) || 0)) + 1
+    : 1;
+  const elVisita = document.getElementById('lev-visita');
+  const disp = document.getElementById('lev-visita-display');
+  if (elVisita) elVisita.value = siguiente;
+  if (disp) disp.textContent = String(siguiente).padStart(3,'0');
+  const elFiltro = document.getElementById('lev-filtro');
+  if (elFiltro) elFiltro.value = 1;
+  lev_renderFiltros();
+  document.querySelector('#s-levantamiento .scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('✦ Nueva visita iniciada', 'ok');
+}
+
+function lev_abrirHistorial() {
+  lev_renderHistorial();
+  document.getElementById('lev-pagina-historial').style.display = 'block';
+}
+
+function lev_cerrarHistorial() {
+  document.getElementById('lev-pagina-historial').style.display = 'none';
+}
+
+function lev_renderHistorial() {
+  const historial = lev_getVisitas();
+  const cont = document.getElementById('lev-historial-lista');
+  if (!cont) return;
+  if (historial.length === 0) {
+    cont.innerHTML = `<div style="text-align:center;padding:48px 20px;color:#607d8b;">
+      <div style="font-size:40px;margin-bottom:12px;">📋</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:1px;">No hay visitas guardadas aún</div>
+      <div style="font-size:12px;margin-top:6px;">Presiona <strong>Guardar</strong> para registrar la visita actual</div>
+    </div>`;
+    return;
+  }
+  cont.innerHTML = historial.map(v => `
+    <div class="lev-visita-card">
+      <div class="lev-visita-card-header">
+        <div class="lev-visita-num-badge">N° ${v.numero}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:#1a2535;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.empresa || 'Sin empresa'}</div>
+          <div style="font-size:11px;color:#607d8b;margin-top:2px;">${v.contacto ? '👤 '+v.contacto : ''} ${v.fecha ? '· 📅 '+v.fecha : ''}</div>
+        </div>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;padding:3px 10px;border-radius:10px;background:#2196c4;color:#fff;white-space:nowrap;flex-shrink:0;">${v.filtros?.length||0} filtro${(v.filtros?.length||0)!==1?'s':''}</span>
+        <button onclick="lev_verVisita('${v.numero}')" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;padding:7px 14px;border-radius:5px;border:none;cursor:pointer;background:#2196c4;color:#fff;white-space:nowrap;flex-shrink:0;">👁 Ver</button>
+        <button onclick="lev_eliminarVisita('${v.numero}')" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;padding:7px 10px;border-radius:5px;cursor:pointer;background:transparent;color:#c62828;border:1px solid #e57373;flex-shrink:0;">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let _lev_visitaModal = null;
+
+function lev_verVisita(numero) {
+  const historial = lev_getVisitas();
+  const v = historial.find(h => h.numero === numero);
+  if (!v) return;
+  _lev_visitaModal = v;
+
+  const tit = document.getElementById('lev-modal-titulo');
+  if (tit) tit.textContent = 'VISITA N° ' + v.numero;
+
+  const filas = (v.filtros || []).map((f,i) => `
+    <tr>
+      <td style="text-align:center;font-weight:700;color:#fff;background:${i%2===0?'#2196c4':'#1565a0'}">${f['lev-filtro']||i+1}</td>
+      <td>${f['lev-nombreFiltro']||'—'}</td>
+      <td style="text-align:center">${f['lev-medA']||'—'}</td>
+      <td style="text-align:center">${f['lev-medB']||'—'}</td>
+      <td style="text-align:center">${f['lev-medC']||'—'}</td>
+      <td>${f['lev-diametro']||'—'}</td>
+      <td>${f['lev-temperatura']||'—'}</td>
+      <td>${f['lev-material']||'—'}</td>
+      <td style="font-size:11px;color:#607d8b">${f['lev-observaciones']||'—'}</td>
+    </tr>`).join('');
+
+  const body = document.getElementById('lev-modal-body');
+  if (body) body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;background:#f0f8ff;border-radius:8px;padding:14px;border:1px solid #cfd8dc;">
+      <div style="display:flex;gap:8px;align-items:baseline;"><span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;color:#2196c4;text-transform:uppercase;min-width:70px;">Empresa</span><span style="font-size:13px;color:#1a2535;font-weight:500;">${v.empresa||'—'}</span></div>
+      <div style="display:flex;gap:8px;align-items:baseline;"><span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;color:#2196c4;text-transform:uppercase;min-width:70px;">Contacto</span><span style="font-size:13px;color:#1a2535;font-weight:500;">${v.contacto||'—'}</span></div>
+      <div style="display:flex;gap:8px;align-items:baseline;"><span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;color:#2196c4;text-transform:uppercase;min-width:70px;">Cargo</span><span style="font-size:13px;color:#1a2535;font-weight:500;">${v.cargo||'—'}</span></div>
+      <div style="display:flex;gap:8px;align-items:baseline;"><span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;color:#2196c4;text-transform:uppercase;min-width:70px;">Fecha</span><span style="font-size:13px;color:#1a2535;font-weight:500;">${v.fecha||'—'}</span></div>
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:#2196c4;margin-bottom:8px;">FILTROS REGISTRADOS</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:#1565a0;">
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1px;">N°</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:1px;">Nombre</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;">A</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;">B</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;">C</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;">Diám.</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;">Temp.</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;">Material</th>
+          <th style="padding:8px;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;">Obs.</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+
+  document.getElementById('lev-modal-visita').style.display = 'block';
+}
+
+function lev_cerrarModal() {
+  document.getElementById('lev-modal-visita').style.display = 'none';
+  _lev_visitaModal = null;
+}
+
+function lev_cargarVisitaEnFormulario() {
+  if (!_lev_visitaModal) return;
+  const v = _lev_visitaModal;
+  if (v.form) {
+    LEV_FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && v.form[id] !== undefined) el.value = v.form[id];
+    });
+  }
+  const disp = document.getElementById('lev-visita-display');
+  if (disp) disp.textContent = String(v.numero).padStart(3,'0');
+  localStorage.setItem('lev_filtros', JSON.stringify(v.filtros || []));
+  localStorage.setItem('lev_form', JSON.stringify(v.form || {}));
+  lev_renderFiltros();
+  lev_cerrarModal();
+  lev_cerrarHistorial();
+  document.querySelector('#s-levantamiento .scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function lev_eliminarVisita(numero) {
+  if (!confirm('¿Eliminar la Visita N° '+numero+' del historial?')) return;
+  let historial = lev_getVisitas().filter(v => v.numero !== numero);
+  localStorage.setItem('lev_historial', JSON.stringify(historial));
+  lev_renderHistorial();
+}
+
+function lev_exportarExcel() {
+  if (typeof XLSX === 'undefined') { toast('XLSX no disponible', 'err'); return; }
+  const g = id => document.getElementById(id)?.value || '';
+  const lista = lev_getFiltros();
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+
+  const cell = (v, s) => ({ v, t: typeof v === 'number' ? 'n' : 's', s });
+  const sTitulo = { font:{bold:true,sz:16,color:{rgb:'FFFFFF'},name:'Calibri'}, fill:{patternType:'solid',fgColor:{rgb:'1565A0'}}, alignment:{horizontal:'center',vertical:'center'} };
+  const sSubtitulo = { font:{bold:false,sz:10,color:{rgb:'FFFFFF'},name:'Calibri'}, fill:{patternType:'solid',fgColor:{rgb:'2196C4'}}, alignment:{horizontal:'center'} };
+  const sEtiqueta = { font:{bold:true,sz:10,color:{rgb:'1565A0'},name:'Calibri'}, fill:{patternType:'solid',fgColor:{rgb:'DAEEF9'}}, alignment:{horizontal:'left',vertical:'center'}, border:{top:{style:'thin',color:{rgb:'B3D9F0'}},bottom:{style:'thin',color:{rgb:'B3D9F0'}},left:{style:'thin',color:{rgb:'B3D9F0'}},right:{style:'thin',color:{rgb:'B3D9F0'}}} };
+  const sValor = { font:{sz:11,name:'Calibri'}, fill:{patternType:'solid',fgColor:{rgb:'F5FBFF'}}, alignment:{horizontal:'left',vertical:'center'}, border:{top:{style:'thin',color:{rgb:'CFD8DC'}},bottom:{style:'thin',color:{rgb:'CFD8DC'}},left:{style:'thin',color:{rgb:'CFD8DC'}},right:{style:'thin',color:{rgb:'CFD8DC'}}} };
+  const sHeader = { font:{bold:true,sz:10,color:{rgb:'FFFFFF'},name:'Calibri'}, fill:{patternType:'solid',fgColor:{rgb:'1565A0'}}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border:{top:{style:'thin',color:{rgb:'0D47A1'}},bottom:{style:'medium',color:{rgb:'2196C4'}},left:{style:'thin',color:{rgb:'0D47A1'}},right:{style:'thin',color:{rgb:'0D47A1'}}} };
+  const sData = bg => ({ font:{sz:10,name:'Calibri'}, fill:{patternType:'solid',fgColor:{rgb:bg}}, alignment:{vertical:'center',wrapText:true}, border:{top:{style:'thin',color:{rgb:'CFD8DC'}},bottom:{style:'thin',color:{rgb:'CFD8DC'}},left:{style:'thin',color:{rgb:'CFD8DC'}},right:{style:'thin',color:{rgb:'CFD8DC'}}} });
+  const sNum = bg => ({ font:{bold:true,sz:11,color:{rgb:'FFFFFF'},name:'Calibri'}, fill:{patternType:'solid',fgColor:{rgb:bg==='EEF7FC'?'2196C4':'4DB8E8'}}, alignment:{horizontal:'center',vertical:'center'}, border:{top:{style:'thin',color:{rgb:'CFD8DC'}},bottom:{style:'thin',color:{rgb:'CFD8DC'}},left:{style:'thin',color:{rgb:'CFD8DC'}},right:{style:'thin',color:{rgb:'CFD8DC'}}} });
+
+  ws['A1'] = cell('INPAMIND – INSUMOS PARA LA MINERÍA E INDUSTRIA', sTitulo);
+  ws['A2'] = cell('Ficha Técnica de Filtros · '+new Date().toLocaleString('es-CL'), sSubtitulo);
+  ws['A4'] = cell('VISITA N°', sEtiqueta);
+  ws['B4'] = cell(g('lev-visita') ? String(g('lev-visita')).padStart(3,'0') : '—', {...sValor,font:{bold:true,sz:14,color:{rgb:'1565A0'},name:'Calibri'}});
+  ws['A5'] = cell('EMPRESA', sEtiqueta);
+  ws['B5'] = cell(g('lev-empresa'), sValor);
+  ws['A6'] = cell('CONTACTO', sEtiqueta);
+  ws['B6'] = cell(g('lev-contacto'), sValor);
+  ws['D6'] = cell('CARGO', sEtiqueta);
+  ws['E6'] = cell(g('lev-cargo'), sValor);
+
+  const cols = ['N°','Nombre Filtro','A','B','C','Diám. Placa','Temperatura','Material','Observaciones','Fecha'];
+  cols.forEach((h,i) => { ws[XLSX.utils.encode_cell({r:7,c:i})] = cell(h, sHeader); });
+
+  const filas = lista.length > 0 ? lista : [{
+    'lev-filtro': g('lev-filtro'), 'lev-nombreFiltro': g('lev-nombreFiltro'),
+    'lev-medA': g('lev-medA'), 'lev-medB': g('lev-medB'), 'lev-medC': g('lev-medC'),
+    'lev-diametro': g('lev-diametro'), 'lev-temperatura': g('lev-temperatura'),
+    'lev-material': g('lev-material'), 'lev-observaciones': g('lev-observaciones'),
+    fecha: new Date().toLocaleString('es-CL')
+  }];
+
+  filas.forEach((f,ri) => {
+    const r = ri+8;
+    const bg = ri%2===0 ? 'EEF7FC' : 'FFFFFF';
+    const rowData = [
+      f['lev-filtro']||'', f['lev-nombreFiltro']||'',
+      f['lev-medA']||'', f['lev-medB']||'', f['lev-medC']||'',
+      f['lev-diametro']||'', f['lev-temperatura']||'', f['lev-material']||'',
+      f['lev-observaciones']||'', f.fecha||''
+    ];
+    rowData.forEach((v,ci) => { ws[XLSX.utils.encode_cell({r,c:ci})] = cell(v, ci===0?sNum(bg):sData(bg)); });
+  });
+
+  ws['!ref'] = 'A1:J'+(8+filas.length);
+  ws['!cols'] = [{wch:12},{wch:26},{wch:10},{wch:10},{wch:10},{wch:15},{wch:13},{wch:22},{wch:36},{wch:20}];
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:9}},{s:{r:1,c:0},e:{r:1,c:9}},{s:{r:3,c:1},e:{r:3,c:9}},{s:{r:4,c:1},e:{r:4,c:9}},{s:{r:5,c:1},e:{r:5,c:2}},{s:{r:5,c:4},e:{r:5,c:9}}];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Ficha Técnica');
+  XLSX.writeFile(wb, 'INPAMIND_Fichas_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('📊 Excel exportado', 'ok');
+}
+
+function lev_generarInforme() {
+  const snapshot = {};
+  LEV_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) snapshot[id] = el.value;
+  });
+  localStorage.setItem('lev_form', JSON.stringify(snapshot));
+  const lista = lev_getFiltros();
+  if (lista.length === 0) { toast('Agrega al menos un filtro antes de generar el informe', 'err'); return; }
+  if (window.JSZip) { lev__buildDocx(lista); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  s.onload = () => lev__buildDocx(lista);
+  s.onerror = () => toast('No se pudo cargar JSZip', 'err');
+  document.head.appendChild(s);
+}
+
+function lev__buildDocx(lista) {
+  const saved = JSON.parse(localStorage.getItem('lev_form') || '{}');
+  const val = id => { const domVal=(document.getElementById(id)?.value||'').trim(); return domVal||(saved[id]||'').trim(); };
+  const empresa  = val('lev-empresa')  || '_______________';
+  const contacto = val('lev-contacto') || '_______________';
+  const cargo    = val('lev-cargo')    || '_______________';
+  const nVisita  = val('lev-visita')   ? String(val('lev-visita')).padStart(3,'0') : '001';
+  const nFiltros = lista.length;
+  const hoy = new Date().toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
+
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const rpr = (bold,sz,color,italic) => `<w:rPr>${bold?'<w:b/>':''}${italic?'<w:i/>':''}<w:color w:val="${color}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>`;
+  const run = (txt,bold=false,sz=22,color='37474F',italic=false) => `<w:r>${rpr(bold,sz,color,italic)}<w:t xml:space="preserve">${esc(txt)}</w:t></w:r>`;
+  const par = (inner,jc='both',before=0,after=120) => `<w:p><w:pPr><w:jc w:val="${jc}"/><w:spacing w:before="${before*20}" w:after="${after*20}"/><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr></w:pPr>${inner}</w:p>`;
+  const parBorder = (side,color='2196C4') => `<w:p><w:pPr><w:pBdr><w:${side} w:val="single" w:sz="6" w:space="1" w:color="${color}"/></w:pBdr><w:spacing w:before="0" w:after="160"/></w:pPr></w:p>`;
+  const tcPr = (fill,w) => `<w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/><w:tcMar><w:top w:w="60" w:type="dxa"/><w:start w:w="120" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:end w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>`;
+  const filaEmp = (label,valor) => `<w:tr><w:tc>${tcPr('DAEEF9',1800)}${par(run(label,true,20,'1565A0'),'left',3,3)}</w:tc><w:tc>${tcPr('FFFFFF',7200)}${par(run(valor,false,20,'37474F'),'left',3,3)}</w:tc></w:tr>`;
+  const tblBorders = (color) => `<w:tblBorders>${['top','bottom','left','right','insideH','insideV'].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="${color}"/>`).join('')}</w:tblBorders>`;
+  const tablaEmpresa = `<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/>${tblBorders('B3D9F0')}</w:tblPr><w:tblGrid><w:gridCol w:w="1800"/><w:gridCol w:w="7200"/></w:tblGrid>${filaEmp('EMPRESA',empresa)}${filaEmp('CONTACTO',contacto)}${filaEmp('CARGO',cargo)}</w:tbl>`;
+
+  const colW=[700,2000,700,700,700,1200,1200,1500,2500];
+  const totW=colW.reduce((a,b)=>a+b,0);
+  const th=(txt,w)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1565A0"/><w:tcMar><w:top w:w="60" w:type="dxa"/><w:start w:w="80" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:end w:w="80" w:type="dxa"/></w:tcMar></w:tcPr>${par(run(txt,true,18,'FFFFFF'),'center',0,0)}</w:tc>`;
+  const td=(txt,w,fill)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/><w:tcMar><w:top w:w="40" w:type="dxa"/><w:start w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:end w:w="80" w:type="dxa"/></w:tcMar></w:tcPr>${par(run(txt,false,18,'37474F'),'center',0,0)}</w:tc>`;
+  const tdN=(txt,w,fill)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/><w:tcMar><w:top w:w="40" w:type="dxa"/><w:start w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:end w:w="80" w:type="dxa"/></w:tcMar></w:tcPr>${par(run(txt,true,18,'FFFFFF'),'center',0,0)}</w:tc>`;
+  const headerRow=`<w:tr><w:trPr><w:tblHeader/></w:trPr>${th('N°',colW[0])}${th('Nombre Filtro',colW[1])}${th('A',colW[2])}${th('B',colW[3])}${th('C',colW[4])}${th('Diám. Placa',colW[5])}${th('Temperatura',colW[6])}${th('Material',colW[7])}${th('Observaciones',colW[8])}</w:tr>`;
+  const dataRows=lista.map((f,i)=>{const bg=i%2===0?'EEF7FC':'FFFFFF';const nbg=i%2===0?'2196C4':'1565A0';return `<w:tr>${tdN(String(f['lev-filtro']||i+1),colW[0],nbg)}${td(f['lev-nombreFiltro']||'',colW[1],bg)}${td(f['lev-medA']||'',colW[2],bg)}${td(f['lev-medB']||'',colW[3],bg)}${td(f['lev-medC']||'',colW[4],bg)}${td(f['lev-diametro']||'',colW[5],bg)}${td(f['lev-temperatura']||'',colW[6],bg)}${td(f['lev-material']||'',colW[7],bg)}${td(f['lev-observaciones']||'',colW[8],bg)}</w:tr>`;}).join('');
+  const grid=colW.map(w=>`<w:gridCol w:w="${w}"/>`).join('');
+  const tablaContenedor=`<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:jc w:val="center"/>${tblBorders('B3D9F0')}</w:tblPr><w:tblGrid>${grid}</w:tblGrid>${headerRow}${dataRows}</w:tbl>`;
+
+  const cuerpo = run('Con fecha ')+run(hoy,true,22,'1565A0')+run(' se llevó a cabo una visita técnica a las instalaciones de ')+run(empresa,true,22,'1565A0')+run(', oportunidad en la que se realizó un levantamiento completo de ')+run(nFiltros+(nFiltros===1?' filtro':' filtros'),true,22,'1565A0')+run('. Durante el desarrollo de la visita contamos con la presencia de don ')+run(contacto,true,22,'1565A0')+run(', ')+run(cargo,true,22,'1565A0')+run(', quien nos acompañó y facilitó el acceso a cada uno de los equipos inspeccionados.');
+
+  const logoB64='/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABGAQMDASIAAhEBAxEB/8QAHAABAAMBAQEBAQAAAAAAAAAAAAYIBAcBAwUC/8QASBAAAQIEBAIFCAcEBwkAAAAAAQIDAAQFEQYHEiETMQg3QVF0FCI2YXGBsrMjMlJyc5HBFTiSsSRidYK0wsMWFiYzQlNUZKL/xAAaAQEAAwEBAQAAAAAAAAAAAAAAAQUGBAMH/8QAMxEAAQIEAwUGBQUBAAAAAAAAAAECAwQFEQYSITFBYXLBEzQ1UXGxMzZzgZEUFSIy8ML/2gAMAwEAAhEDEQA/ALlxGZ/H+D5CdekputstTDCy24gtrJSoGxGyYk0VOzJ9P674534jFzRadDn4jmRFVLJfQzWJazGpMFkSE1FVVtrfy4KhZbD+LMPV+ZclqPU25t1tGtaUpUCE3tfcDtIjHquOsJ0uoOyE/WWWJlk2cbKFkpNr9gt2xqXo1ellR8CfmIiL5wdZNZ/GT8CYsIdCgOn3yyuWyNvuvu4FRGxVNMpUOdRjcznK22tra8eBYehYywzXJ7yGlVZqamdJXw0oUDYczuBHdW8T0CiTjUpVqoxJvOp1oS5cXF7Xvaw3jRPR86xEeFd/SPT6S3pRTPBf51R5vosFKgkqjlsqXvpffwPaHiaZdR3T6sbmR1ra2tpx4m9ZKblZ6WTMyUyzMsL3S40sLSfYRHdFSMH4nquF6q3PU6YWlOocZgnzHk9qVD9eY7ItXRKlK1ikytTklhbEy2HEG4Nr8wbdoOx9YjiqtIfT3It7tXYvRS0oGIYdXa5MuV7dqdU/2hmQhCKc0QhCEAIQhACEIQAhCEAIQhACEIQAhCEAIQhACEIQAhCEAIQhACEIQAip2ZPp/XfHO/EYtjFTsyfT+u+Od+IxqcK/Hf6dTB4+7rC5uhNOjV6WVHwJ+YiIvnB1k1n8ZPwJiUdGr0sqXgT8xERfODrJrP4yfgTF1B8YicidDMTPy5B+ovsp6/R86xEeFd/SN24qwXh3E0y3M1iTW+823w0KS8tFk3vyBtzMaS6PnWIjwrv6RsLNnE+I6PiCQkKE+pPHY1cNLKXFKVqI2uCeyKHEMWJCn0dDVUXKmz7mswdLwpikqyK1HNzLoqXTca5zXy7VhEtT8g+7M0x5ei7ltbS+YSbcwQDY27PzhwCrNTok8idpc47LPIN/MVsr1EciPUY3dmMmsqyTecxEsLqKnWlqGkDRdwWG217fzjQUaKiTL52TvG1sqp6/65j8TyUOmVG0t/FFRHJbcuuz8FwMM1L9sYdp9V0aDNS6HVJH/SSASPzvEdwjXqnUMeYhpU0+FykkqzCA2kafOtzAuffGflf1e0PwaIjuAOtLFv3h8UfPphiMjPamxFX3PrsnEdFl4b3bVRF/KHrZw4kqOFMDTFZpYZMy262hPGRqTZSgDtcRGsDY/rtZyhr+KpxMoKhIKfDIQ0QjzGkKFxffdR7YzOkn1UzviGPjEQjKj93HF/35v/Dtx5HTvMTBWelemMUSMtiFNPTTHnA28tpkpU3q2Cr6jsDYn1XixcU1lML+XZVzGJ5RsmYp9TUzN2PNlSG9Bt6lE/xeqLC5AYuOJ8ENy8y4pdQpmmXfKlXK028xfvAtv2pMAingZI5lYjxjjCdpVXTJCXZklvo4LRSrUHEJFySdrKMRTEGc2OZXFlTpFPl6e8mXnXmWUCVUtZShagOStzYRj9FnrIqf9mO/OajFy8UlPSWcUpQSBU6huT/UegQerRc/cRSdRQxiOiybjAUA6GULaeSO02USCfVYX7xFhKZOy1SpstUJNziS0y0l1pf2kqFwfyMaD6Vs/RJl+jS8q8w9U2S7xi0oEobOmyV27zuB2WPfEqwvVprC3RqYqUzqTMokneBqNzdx1QaPsstJ9kCUIFi7OrFjWJ6mzRJqU/ZrMytuXJlkqugGwVc99r++N/YIrTeIsI0ytNqCjNS6VOW5BwbLHuUFD3RW/LnCLdYymxnWHGtb7aEiWXbdJa+lXb2iwjYnRVrhm8Kz9CdN1098ON/huXNvcpKj/egEPGzSzdxZhvHtTolORTjKyykBvisFSt20qNzqHaTG2sssQuYpwPTa2+G0zD7ZDwbFkhaVFKrDs3F/fFfsx6UK50galSLgKm1paQTyCzLJ0n3GxibdFCqlVKrNAecs5LvpmG21HeyhpVb1ApH8XrgQikoz2x5UME0mnGkpl1Ts4+ofToKkhtKfO2BG91JjyMicxsQ40rdQk6ymSDcvLB1HAaKTfUBvcmIjmz/xhnpLUEO65SnshLiQbp81Bec95Hmn2eqPnom+lNZ8En4xAX1JFldmhiXEmZBw/UUyAk/p92mSlfmA231Hujw8fZyYvomM6tSJJFNMtKTKmm+IwSrSO86o8TIXrtPsmv5GMWtUJvEufdXobjnD8rm5lKF/ZWG1FB9moCAuWOy+xIxizCUjW2QlK3kWfbBvw3RspP57j1ERrnNvMvEeF8wZShUxMiZR1llauKyVKupZB3uOwREejriR/DWM5vB9W+gbnHS2Er24cyja394C3tCY6ekV1xU/w0t8xUCbk6z2zGxDguu0+So6ZItTEsXV8doqOrURtYjuiDpzvzBk0ImJykU8sLtZTsm4hKh6jqEd/Sy9LKR4E/MMb4wq00/guksvtIdaXT2ApC0gpUOGnYg84DeRLKnNWl41cNPfY/Z1WSkqDBXqQ6BzKDtcjmR/PeNixUzMGRTgDOXi0ccFlmYam5dA2CUqsSj7t9Q9kWyQoLQlQ5EXEQEOYQhAkRU7Mn0/rvjnfiMWxip2ZPp/XfHO/EY1OFfjv9Opg8fd1hc3QmvRq9Kql4H/AFExFs4Osms/jJ+BMSno1elVS8D/AKiYi2cHWTWfxk/AmLqB4xE5U6GZmflyD9Rf+j1+j51iI8K7+kWM4bfEDuhPEAsFW3t3XiufR86xEeFd/SLHRncTd9+ydTY4H8NXmX2QgufHVpP/AIjPzExWiLL58dWk/wDiM/MTFaIvcL9zXmX2QyuOvEW8ie7i1uVxvl7Q7f8AiIiO4A60sW/eHxRIMq+ruh+FT/MxH8AdaWLfvD4oxU53iJ6r7n02ndzg8rfZD46SfVTO+IY+MRCMqP3ccX/fm/8ADtxsLP2m1CrZbTclTJJ+cmVPslLTKCtRAWCTYREMtcP1ySyGxRSpukTrE/MLmSzLOMqS45qZQBZJ3NyCPdHOdu8+ei/Jy1QwFX5CcaS7LzE2WnUKGykqaAIiCYTnJnKjOF2nz7h8h4nk0wsggLYXYodt6vNV28iI2l0aKLV6JhiqMVemzcg65OhaETDRQVJ0JFwD2R09JDA83iGmydco8m9NVGTPBcaZTqW4yo7WA3OlR7OxR7oEbiE9GBAbzQq7YIUE054Ag3Bs+1EOmcPTWKs36pQZJ5ll+aqc5oW8ToGlTizewJ5JMbC6NeGMRUXHE7NVeiVCQYXTVtpcmGFISVF1o2uRzsD+UdWBML4jlOkCurzNDqDNPNRnV+Url1BvSpLuk6rWsbi3tgDOwv0fOHOtP4jrTbzCFXXLyiFDiDuKzYgd9hf1iO3pUVViSoVFwtJqQ0lSi+thvbQ2gaWxb7JJVYf1PVG9YrZmjhvFWMc3VLTQKmimcdqSbmFy6uGlpJAUvVy03K1X7jAlSN4NzXxFhXDjVCptMo7kqgrUpT0utS3CokkqIWAeduXICOzo+VwUfM6UQ6sMsVFKpRY3tdW6B/GEj3xbFtCW20toFkpAAHcBFd89MH4m/wB5ycQYfpE9OpebZmA5LsKWG3UebY27fMSffAix01b961HjmfkJhRpqUy+6RNURMq4FPmOMCQNkIcSHUgDu1BKYzEUTEdQ6QEliVWHanLyLz8u8txyXUEtfQI1Am1tjcH1iMzpL4OrFXrtKq1EqE3PrXLqYmPJmisp0qukqsO3WfygDz8h5Zy1zjGWMppo6lsOpbUdwFu6lqAPeAAPYr1x0dEz0prPgk/GI2XlFhucw/lJ5DNyq2Z+abeeeZKbLClAhII530hO3ftEK6M+G6/RMR1V6sUaekG3JRKUKmGFICjrBsLiAIrkL12n2TX8jGbRv3pnP7Tf+WqMvJfC2JKbm6ahUKFUZWU/pP07supKNwbbkW3jLpWGcQt9I1ysros+mnGoPLE0WFcLSUKAOq1rbwBh9JfDD1IxHKYzpYW0iaWlL7iDYtzCd0qHdcD80nviIZgYlaxZi3D1aTs+5Jy6JlP2XUurCvcbXHqIi0WN8Py2KMLT1EmgkCYbIbWRfhuDdKvcbGKoyWX+NZWtsJcwxVSlqZSFLTLKKLBW5BtYj1wQKTfpZellI8CfmGN94O9EaN4Bj5aY0z0l8N4greJaW/SKNPz7TcmUrXLsKWEnWTYkDnEaZYzyq8g3RUMVtmVaaDaUFtEqNAFgCuyb7dl4E7zAzkm0YpzlclKWQ/wDSsyLZTuFrFgbf3iR7ota2nQ2lH2QBGn8mMoXMNVBGIMROMu1FsHyaXbOpLBIsVE8lKsbdw9Z5biiAghCECRFTcxzfH1dP/vuj/wCjFso61MMqUVKZbUTzJSItaTU0p8Rz8ua6W226KUFfoi1eEyGj8uVb7L9UND9Gr0qqXgf86Yi2cHWTWfxk/AmLRtttt30NoTfnpFo4UyytRUpptRPaUgx2sryNnHTPZ7Uta/pvtwKyLhNYlNZI9r/Vyuvl9dLX4+ZXTo+dYaPCO/pFjo+ENNIN0NoSe8JAj7iuqc/+uj9rltpbbcuaFSf2qW7DPm1Vb2tttxUgufHVpP8A4jPzExWiLoKSlSSlSQoHmCLx1+Ty/wD2Gv4BHfS64khBWFkvrfbby4FTXsLLVplI6RctkRLWvvVfNPMj2VfV3Q/Cp/WI/gDrSxb94fFGxgAkAAAAcgI+UtNpWpaW0JUr6ygNzFJGidrEc/zVV/JqJaD2EFkK98qIn4SxiVmack5Nt1oJKlTLDR1DsW8hB99lGIlLYsrT9WnKYJWUQ62zUXZZazZDgZeS21cki2+sKH3TcXidEA8xePktoPNCTzHLv5x5HuRB7FE0zh9iaS/LvTLrDunUzwyt1DyW9IQFquQVEbKIJ3BsY+H8UVJnEDNKUmWUXqjZJCFbSuot7m/1+ICb9x5c4mXCbsgcNFkfU836vs7o50IvfSm/sgCGN4grLkrOLYmqVMurlS+yhKdAlVcQJ4ThK7KXuQL6LqQobA7elOVWdVguXqVPfbdm3uAlLhlSUqK3EIJ4esdhO2r3mPfLTRCwW0EL+uNI87298fVhYCwsOQgCMS2IZwYjptKnGUtLdlEeVIQ0pSW5haFL08QXSLBsjSdzrSRy38WSxlWP9iBUplptyqOvtol2m5NZ1gsJeI0IUs/V1+dcdhIEbBKUnmkc78u3vjgNoBBCEgjltygDyqjWG2DRXmnmPJJ+Y0KdUrbQWHHEkG9tylP5xi0nECpvF1RpCwOC0n+irDSgFlGkO+efNUQpYTYbjSbx76mm1ICFNoUkckkbCOQhIIISARe23fzgCGM4pqLuIHaUlMsFM1GyroVvKlfCFt/r6ze/Kw5dsdbeLKkiTk56YRLCXeZ0uEIVdDy3VIbPPZJ0afvLT64m+hF76U39kNCLW0pt3WgCE1DEdbaTXlMcD+iTrErKp8nCj57jaCSA6Co+ediEC9tzHEviSouUhdTWEeVGjSzrLSErU3x3lrSLtpJJ84IFtyNwD3zbht6irhourmbc450IvfSn8oEEVq2JJpOXzddkQgTa1MNqS43shxTyGnElKlJ3SSoWJG43Ij036hNMSFIcVoU7NPNNPEpA+skk2AUoDcdilD1nnHrKQhSChSElJ3II2MchKQAAkWHIW5QJIJSsXVWckZlD7cvKzbUml8OKaJbIW5ZCwNW6bXBFx5yFdkd6cVzrcgXX3JFRTLz+l9KSlt91hSQ2UAqOygVebc8jY7RMy22RYoTYi1rdndBTaFBKVISQkggEcrQBFZ+sVhFVrcm3NSTJl5UvyKfJ+LdKEoKyshwEHUSNJCdikgmxj4YrVbbrtGkX3JV5mZl21zK0yxQCpYdIsS4dP/LAAsq57riJaG0BSlBCQVfWNtz7Y5KEnmkdnZ3coAh7eLJg1GgypaSsTbYXPKSyspZDhKWvOFwm60kedz7ImMcaEfZT2dndyjmAEIQgBCEIAQhCAEIQgBCEIAQhCAEIQgBCEIAQhCAEIQgBCEIAQhCAEIQgBCEIAQhCAEIQgBCEIAQhCAP/2Q==';
+
+  const logoXml=`<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:before="0" w:after="60"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="2200000" cy="430000"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="Logo"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="1" name="Logo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId2"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2200000" cy="430000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+
+  const docXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${logoXml}${parBorder('bottom','2196C4')}${par(run('INFORME DE VISITA N° '+nVisita,true,32,'1565A0'),'left',6,6)}${par(run('Fecha: '+hoy,false,20,'607D8B'),'left',0,12)}${tablaEmpresa}${par('','left',0,8)}${par(cuerpo,'both',0,10)}${par(run('A continuación se detallan las medidas tomadas:',true,22,'1565A0'),'left',6,6)}${tablaContenedor}${par('','left',0,10)}${parBorder('top','2196C4')}${par(run('Quedamos a plena disposición para resolver cualquier consulta adicional respecto al levantamiento realizado, y para presentar nuestra propuesta con los productos INPAMIND que mejor se ajusten a los requerimientos técnicos de su planta.'),'both',0,20)}${par(run('Víctor Pardo',true,24,'1565A0'),'left',0,0)}${par(run('Ejecutivo de Ventas Técnicas',false,20,'37474F'),'left',0,0)}${par(run('INPAMIND',true,20,'2196C4'),'left',0,0)}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="709" w:footer="709" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.jpeg"/></Relationships>`;
+  const contentTypes=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+  const appRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>`;
+
+  function b64ToUint8(b64){const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return arr;}
+  const zip=new JSZip();
+  zip.file('[Content_Types].xml',contentTypes);
+  zip.folder('_rels').file('.rels',appRels);
+  const word=zip.folder('word');
+  word.file('document.xml',docXml);
+  word.file('styles.xml',styles);
+  word.folder('_rels').file('document.xml.rels',rels);
+  word.folder('media').file('logo.jpeg',b64ToUint8(logoB64));
+  zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}).then(blob=>{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='INPAMIND_Informe_Visita_'+nVisita+'.docx';
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+    toast('📄 Informe Word generado', 'ok');
+  });
+}
+
+// ── Levantamiento: Autocomplete empresa ──
+function lev_handleEmpresaSearch() {
+  const q = document.getElementById('lev-empresa').value.toLowerCase().trim();
+  const listEl = document.getElementById('lev-empresa-list');
+  if (!q) { listEl.style.display = 'none'; return; }
+
+  const matches = knownClients.filter(c => c.cliente.toLowerCase().includes(q));
+  if (!matches.length) { listEl.style.display = 'none'; return; }
+
+  const esc = s => String(s||'').replace(/'/g,"\\'");
+  listEl.innerHTML = matches.slice(0,8).map(c => `
+    <div class="ac-item" onclick="lev_selectEmpresa('${esc(c.cliente)}')">
+      <ion-icon name="business"></ion-icon>
+      <div>
+        <div style="font-weight:600">${c.cliente}</div>
+        ${c.contacto ? `<div style="font-size:11px;color:var(--t50)">${c.contacto}${c.cargo ? ' · '+c.cargo : ''}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  listEl.style.display = 'flex';
+}
+
+function lev_selectEmpresa(nombre) {
+  const c = knownClients.find(x => x.cliente === nombre);
+  if (c) {
+    const emp = docu
