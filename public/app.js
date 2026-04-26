@@ -1621,3 +1621,12 @@ function lev_selectEmpresa(nombre) {
   const c = knownClients.find(x => x.cliente === nombre);
   if (c) {
     const emp = docu
+ment.getElementById('lev-empresa');
+    if (emp) emp.value = nombre;
+    const cont = document.getElementById('lev-contacto');
+    if (cont) cont.value = c.contacto || '';
+    const carg = document.getElementById('lev-cargo');
+    if (carg) carg.value = c.cargo || '';
+  }
+  document.getElementById('lev-empresa-list').style.display = 'none';
+}
