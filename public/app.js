@@ -724,7 +724,7 @@ function gcVisitCardHTML(v, showSeller) {
   return `<div class="gc-visit" onclick="showDetail('${v.id}')" style="cursor:pointer">
     <div class="gc-v-actions" onclick="event.stopPropagation()">
       <ion-icon name="create-outline" onclick="editVisit('${v.id}')"></ion-icon>
-      <ion-icon name="document-text-outline" style="color:var(--cyan)" title="Levantamiento" onclick="abrirLevantamientoDesdeVisita('${esc(v.cliente)}','${esc(v.contacto||\'\')}','${esc(v.cargo||\'\')}')"></ion-icon>
+      <ion-icon name="document-text-outline" style="color:var(--cyan)" title="Levantamiento" onclick="abrirLevantamientoDesdeVisita('${esc(v.cliente)}','${esc(v.contacto||'')}','${esc(v.cargo||'')}')"></ion-icon>
       <ion-icon name="trash-outline" onclick="deleteVisit('${v.id}')"></ion-icon>
     </div>
     
@@ -780,7 +780,7 @@ async function showDetail(id) {
     ${photoSrc ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="camera" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto de Ingreso</span></div><img src="${photoSrc}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
     ${v.foto_adicional_url ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="images" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto Adicional</span></div><img src="${v.foto_adicional_url.startsWith('http') ? v.foto_adicional_url : API + v.foto_adicional_url}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
     <button class="btn-cyan" onclick="editVisit('${v.id}')" style="margin-bottom:10px"><ion-icon name="create-outline" style="font-size:18px"></ion-icon>EDITAR VISITA</button>
-    <button class="btn-glass" onclick="abrirLevantamientoDesdeVisita('${esc(v.cliente)}','${esc(v.contacto||\'\')}','${esc(v.cargo||\'\')}');" style="margin-bottom:10px;border-color:rgba(65,198,246,.3);color:var(--cyan)"><ion-icon name="document-text-outline" style="font-size:18px"></ion-icon>${lev_tieneRegistros(v.cliente)?'VER LEVANTAMIENTO':'CREAR LEVANTAMIENTO'}</button>
+    <button class="btn-glass" onclick="abrirLevantamientoDesdeVisita('${esc(v.cliente)}','${esc(v.contacto||'')}','${esc(v.cargo||'')}');" style="margin-bottom:10px;border-color:rgba(65,198,246,.3);color:var(--cyan)"><ion-icon name="document-text-outline" style="font-size:18px"></ion-icon>${lev_tieneRegistros(v.cliente)?'VER LEVANTAMIENTO':'CREAR LEVANTAMIENTO'}</button>
     <button class="btn-glass" onclick="deleteVisit('${v.id}')" style="border-color:rgba(255,68,68,.3);color:var(--danger)"><ion-icon name="trash-outline" style="font-size:18px"></ion-icon>ELIMINAR VISITA</button>`;
     showScreen('s-detail');
   } catch (e) {
