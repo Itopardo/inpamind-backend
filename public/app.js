@@ -717,10 +717,14 @@ function gcVisitCardHTML(v, showSeller) {
   const photoTag = v.foto_url 
     ? `<div class="gc-v-foot"><ion-icon name="camera" style="font-size:14px"></ion-icon> Con foto</div>` 
     : '';
+  const levTag = lev_tieneRegistros(v.cliente)
+    ? `<div class="gc-v-foot" style="color:var(--cyan);margin-top:4px"><ion-icon name="document-text-outline" style="font-size:13px"></ion-icon> Con levantamiento</div>`
+    : '';
 
   return `<div class="gc-visit" onclick="showDetail('${v.id}')" style="cursor:pointer">
     <div class="gc-v-actions" onclick="event.stopPropagation()">
       <ion-icon name="create-outline" onclick="editVisit('${v.id}')"></ion-icon>
+      <ion-icon name="document-text-outline" style="color:var(--cyan)" title="Levantamiento" onclick="abrirLevantamientoDesdeVisita('${esc(v.cliente)}','${esc(v.contacto||\'\')}','${esc(v.cargo||\'\')}')"></ion-icon>
       <ion-icon name="trash-outline" onclick="deleteVisit('${v.id}')"></ion-icon>
     </div>
     
@@ -732,7 +736,7 @@ function gcVisitCardHTML(v, showSeller) {
     ${showSeller && v.seller_name ? `<div class="gc-v-row" style="color:var(--amber)"><ion-icon name="person-circle-outline"></ion-icon> ${esc(v.seller_name)}</div>` : ''}
     
     ${v.descripcion ? `<div class="gc-v-desc">${esc(v.descripcion)}</div>` : ''}
-    ${photoTag}
+    ${photoTag}${levTag}
   </div>`;
 }
 
@@ -776,6 +780,7 @@ async function showDetail(id) {
     ${photoSrc ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="camera" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto de Ingreso</span></div><img src="${photoSrc}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
     ${v.foto_adicional_url ? `<div class="card" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><ion-icon name="images" style="font-size:14px;color:var(--cyan)"></ion-icon><span style="font-size:12px;color:var(--t70);font-weight:600">Foto Adicional</span></div><img src="${v.foto_adicional_url.startsWith('http') ? v.foto_adicional_url : API + v.foto_adicional_url}" class="det-photo" onclick="openModal(this.src)"></div>` : ''}
     <button class="btn-cyan" onclick="editVisit('${v.id}')" style="margin-bottom:10px"><ion-icon name="create-outline" style="font-size:18px"></ion-icon>EDITAR VISITA</button>
+    <button class="btn-glass" onclick="abrirLevantamientoDesdeVisita('${esc(v.cliente)}','${esc(v.contacto||\'\')}','${esc(v.cargo||\'\')}');" style="margin-bottom:10px;border-color:rgba(65,198,246,.3);color:var(--cyan)"><ion-icon name="document-text-outline" style="font-size:18px"></ion-icon>${lev_tieneRegistros(v.cliente)?'VER LEVANTAMIENTO':'CREAR LEVANTAMIENTO'}</button>
     <button class="btn-glass" onclick="deleteVisit('${v.id}')" style="border-color:rgba(255,68,68,.3);color:var(--danger)"><ion-icon name="trash-outline" style="font-size:18px"></ion-icon>ELIMINAR VISITA</button>`;
     showScreen('s-detail');
   } catch (e) {
@@ -1129,6 +1134,29 @@ function lev_getVisitas() {
 function lev_getFiltros() {
   try { return JSON.parse(localStorage.getItem('lev_filtros')) || []; }
   catch(e) { return []; }
+}
+
+// Verifica si existe al menos un levantamiento guardado para una empresa
+function lev_tieneRegistros(empresa) {
+  if (!empresa) return false;
+  const e = empresa.toLowerCase().trim();
+  return lev_getVisitas().some(v => (v.empresa||'').toLowerCase().trim() === e);
+}
+
+// Navega al tab Levantamiento y pre-llena los datos de la visita
+function abrirLevantamientoDesdeVisita(cliente, contacto, cargo) {
+  switchTab(2);
+  setTimeout(() => {
+    const emp  = document.getElementById('lev-empresa');
+    const cont = document.getElementById('lev-contacto');
+    const carg = document.getElementById('lev-cargo');
+    const list = document.getElementById('lev-empresa-list');
+    if (emp)  emp.value  = cliente  || '';
+    if (cont) cont.value = contacto || '';
+    if (carg) carg.value = cargo    || '';
+    if (list) list.style.display = 'none';
+    if (cliente) toast('✓ Empresa pre-llenada desde la visita', 'ok');
+  }, 350);
 }
 
 function lev_asignarVisita() {
