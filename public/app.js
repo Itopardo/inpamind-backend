@@ -1620,8 +1620,7 @@ function lev_handleEmpresaSearch() {
 function lev_selectEmpresa(nombre) {
   const c = knownClients.find(x => x.cliente === nombre);
   if (c) {
-    const emp = docu
-ment.getElementById('lev-empresa');
+    const emp = document.getElementById('lev-empresa');
     if (emp) emp.value = nombre;
     const cont = document.getElementById('lev-contacto');
     if (cont) cont.value = c.contacto || '';
