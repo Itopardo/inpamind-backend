@@ -1606,7 +1606,7 @@ function lev_handleEmpresaSearch() {
 
   const esc = s => String(s||'').replace(/'/g,"\\'");
   listEl.innerHTML = matches.slice(0,8).map(c => `
-    <div class="ac-item" onclick="lev_selectEmpresa('${esc(c.cliente)}')">
+    <div class="ac-item" onclick="lev_selectEmpresa('${esc(c.cliente)}')" ontouchend="event.preventDefault();lev_selectEmpresa('${esc(c.cliente)}')">
       <ion-icon name="business"></ion-icon>
       <div>
         <div style="font-weight:600">${c.cliente}</div>
