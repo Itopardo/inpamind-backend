@@ -1119,7 +1119,7 @@ document.addEventListener('keydown', (e) => {
 //  LEVANTAMIENTO TÉCNICO — Funciones lev_*
 // ══════════════════════════════════════════════════════════════
 
-const LEV_FIELDS = ['lev-visita','lev-filtro','lev-nombreFiltro','lev-empresa','lev-contacto','lev-cargo','lev-medA','lev-medB','lev-medC','lev-diametro','lev-temperatura','lev-material','lev-observaciones'];
+const LEV_FIELDS = ['lev-visita','lev-filtro','lev-nombreFiltro','lev-empresa','lev-contacto','lev-cargo','lev-medA','lev-medB','lev-medC','lev-diametro','lev-temperatura','lev-material','lev-cantidad','lev-observaciones'];
 
 function lev_getVisitas() {
   try { return JSON.parse(localStorage.getItem('lev_historial') || '[]'); }
@@ -1254,6 +1254,7 @@ function lev_renderFiltros() {
       <td>${f['lev-diametro'] || '—'}</td>
       <td>${f['lev-temperatura'] || '—'}</td>
       <td>${f['lev-material'] || '—'}</td>
+      <td style="text-align:center">${f['lev-cantidad'] || '—'}</td>
       <td style="max-width:150px;white-space:pre-wrap;font-size:11px;color:#607d8b;">${f['lev-observaciones'] || '—'}</td>
       <td style="white-space:nowrap;">
         <button class="lev-btn-cargar" onclick="lev_cargarFiltro(${f._id})">✎ Cargar</button>
@@ -1485,14 +1486,14 @@ function lev_exportarExcel() {
   ws['D6'] = cell('CARGO', sEtiqueta);
   ws['E6'] = cell(g('lev-cargo'), sValor);
 
-  const cols = ['N°','Nombre Filtro','A','B','C','Diám. Placa','Temperatura','Material','Observaciones','Fecha'];
+  const cols = ['N°','Nombre Filtro','A','B','C','Diám. Placa','Temperatura','Material','Cantidad','Observaciones','Fecha'];
   cols.forEach((h,i) => { ws[XLSX.utils.encode_cell({r:7,c:i})] = cell(h, sHeader); });
 
   const filas = lista.length > 0 ? lista : [{
     'lev-filtro': g('lev-filtro'), 'lev-nombreFiltro': g('lev-nombreFiltro'),
     'lev-medA': g('lev-medA'), 'lev-medB': g('lev-medB'), 'lev-medC': g('lev-medC'),
     'lev-diametro': g('lev-diametro'), 'lev-temperatura': g('lev-temperatura'),
-    'lev-material': g('lev-material'), 'lev-observaciones': g('lev-observaciones'),
+    'lev-material': g('lev-material'), 'lev-cantidad': g('lev-cantidad'), 'lev-observaciones': g('lev-observaciones'),
     fecha: new Date().toLocaleString('es-CL')
   }];
 
@@ -1502,14 +1503,14 @@ function lev_exportarExcel() {
     const rowData = [
       f['lev-filtro']||'', f['lev-nombreFiltro']||'',
       f['lev-medA']||'', f['lev-medB']||'', f['lev-medC']||'',
-      f['lev-diametro']||'', f['lev-temperatura']||'', f['lev-material']||'',
+      f['lev-diametro']||'', f['lev-temperatura']||'', f['lev-material']||'', f['lev-cantidad']||'',
       f['lev-observaciones']||'', f.fecha||''
     ];
     rowData.forEach((v,ci) => { ws[XLSX.utils.encode_cell({r,c:ci})] = cell(v, ci===0?sNum(bg):sData(bg)); });
   });
 
-  ws['!ref'] = 'A1:J'+(8+filas.length);
-  ws['!cols'] = [{wch:12},{wch:26},{wch:10},{wch:10},{wch:10},{wch:15},{wch:13},{wch:22},{wch:36},{wch:20}];
+  ws['!ref'] = 'A1:K'+(8+filas.length);
+  ws['!cols'] = [{wch:12},{wch:26},{wch:10},{wch:10},{wch:10},{wch:15},{wch:13},{wch:22},{wch:10},{wch:36},{wch:20}];
   ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:9}},{s:{r:1,c:0},e:{r:1,c:9}},{s:{r:3,c:1},e:{r:3,c:9}},{s:{r:4,c:1},e:{r:4,c:9}},{s:{r:5,c:1},e:{r:5,c:2}},{s:{r:5,c:4},e:{r:5,c:9}}];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Ficha Técnica');
@@ -1554,13 +1555,13 @@ function lev__buildDocx(lista) {
   const tblBorders = (color) => `<w:tblBorders>${['top','bottom','left','right','insideH','insideV'].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="${color}"/>`).join('')}</w:tblBorders>`;
   const tablaEmpresa = `<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/>${tblBorders('B3D9F0')}</w:tblPr><w:tblGrid><w:gridCol w:w="1800"/><w:gridCol w:w="7200"/></w:tblGrid>${filaEmp('EMPRESA',empresa)}${filaEmp('CONTACTO',contacto)}${filaEmp('CARGO',cargo)}</w:tbl>`;
 
-  const colW=[700,2000,700,700,700,1200,1200,1500,2500];
+  const colW=[700,2000,700,700,700,1200,1200,1500,900,2500];
   const totW=colW.reduce((a,b)=>a+b,0);
   const th=(txt,w)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1565A0"/><w:tcMar><w:top w:w="60" w:type="dxa"/><w:start w:w="80" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:end w:w="80" w:type="dxa"/></w:tcMar></w:tcPr>${par(run(txt,true,18,'FFFFFF'),'center',0,0)}</w:tc>`;
   const td=(txt,w,fill)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/><w:tcMar><w:top w:w="40" w:type="dxa"/><w:start w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:end w:w="80" w:type="dxa"/></w:tcMar></w:tcPr>${par(run(txt,false,18,'37474F'),'center',0,0)}</w:tc>`;
   const tdN=(txt,w,fill)=>`<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/><w:tcMar><w:top w:w="40" w:type="dxa"/><w:start w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:end w:w="80" w:type="dxa"/></w:tcMar></w:tcPr>${par(run(txt,true,18,'FFFFFF'),'center',0,0)}</w:tc>`;
-  const headerRow=`<w:tr><w:trPr><w:tblHeader/></w:trPr>${th('N°',colW[0])}${th('Nombre Filtro',colW[1])}${th('A',colW[2])}${th('B',colW[3])}${th('C',colW[4])}${th('Diám. Placa',colW[5])}${th('Temperatura',colW[6])}${th('Material',colW[7])}${th('Observaciones',colW[8])}</w:tr>`;
-  const dataRows=lista.map((f,i)=>{const bg=i%2===0?'EEF7FC':'FFFFFF';const nbg=i%2===0?'2196C4':'1565A0';return `<w:tr>${tdN(String(f['lev-filtro']||i+1),colW[0],nbg)}${td(f['lev-nombreFiltro']||'',colW[1],bg)}${td(f['lev-medA']||'',colW[2],bg)}${td(f['lev-medB']||'',colW[3],bg)}${td(f['lev-medC']||'',colW[4],bg)}${td(f['lev-diametro']||'',colW[5],bg)}${td(f['lev-temperatura']||'',colW[6],bg)}${td(f['lev-material']||'',colW[7],bg)}${td(f['lev-observaciones']||'',colW[8],bg)}</w:tr>`;}).join('');
+  const headerRow=`<w:tr><w:trPr><w:tblHeader/></w:trPr>${th('N°',colW[0])}${th('Nombre Filtro',colW[1])}${th('A',colW[2])}${th('B',colW[3])}${th('C',colW[4])}${th('Diám. Placa',colW[5])}${th('Temperatura',colW[6])}${th('Material',colW[7])}${th('Cantidad',colW[8])}${th('Observaciones',colW[9])}</w:tr>`;
+  const dataRows=lista.map((f,i)=>{const bg=i%2===0?'EEF7FC':'FFFFFF';const nbg=i%2===0?'2196C4':'1565A0';return `<w:tr>${tdN(String(f['lev-filtro']||i+1),colW[0],nbg)}${td(f['lev-nombreFiltro']||'',colW[1],bg)}${td(f['lev-medA']||'',colW[2],bg)}${td(f['lev-medB']||'',colW[3],bg)}${td(f['lev-medC']||'',colW[4],bg)}${td(f['lev-diametro']||'',colW[5],bg)}${td(f['lev-temperatura']||'',colW[6],bg)}${td(f['lev-material']||'',colW[7],bg)}${td(f['lev-cantidad']||'',colW[8],bg)}${td(f['lev-observaciones']||'',colW[9],bg)}</w:tr>`;}).join('');
   const grid=colW.map(w=>`<w:gridCol w:w="${w}"/>`).join('');
   const tablaContenedor=`<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:jc w:val="center"/>${tblBorders('B3D9F0')}</w:tblPr><w:tblGrid>${grid}</w:tblGrid>${headerRow}${dataRows}</w:tbl>`;
 
