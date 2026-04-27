@@ -401,13 +401,14 @@
             </div>
           </div>
           <div class="lev-meas-card" style="margin-top:8px;">
-            <div class="lev-table-sub" style="grid-template-columns:1fr 1fr 1fr;">
-              <span>Diámetro</span><span>Temp.</span><span>Material</span>
+            <div class="lev-table-sub" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+              <span>Diámetro</span><span>Temp.</span><span>Material</span><span>Cant.</span>
             </div>
-            <div class="lev-table-inputs">
+            <div class="lev-table-inputs" style="grid-template-columns:1fr 1fr 1fr 1fr;">
               <input id="lev-diametro" type="text" placeholder="ej.95mm" autocomplete="off">
               <input id="lev-temperatura" type="text" placeholder="ej.200°C" autocomplete="off">
               <input id="lev-material" type="text" placeholder="AISI304" autocomplete="off">
+              <input id="lev-cantidad" type="number" min="1" placeholder="Cant." autocomplete="off">
             </div>
           </div>
         </div>
@@ -440,7 +441,7 @@
           <table class="lev-filtros-table">
             <thead>
               <tr>
-                <th>N°</th><th>Nombre</th><th>Empresa</th><th>A</th><th>B</th><th>C</th><th>Diám.</th><th>Temp.</th><th>Material</th><th>Obs.</th><th>Acciones</th>
+                <th>N°</th><th>Nombre</th><th>Empresa</th><th>A</th><th>B</th><th>C</th><th>Diám.</th><th>Temp.</th><th>Material</th><th>Cant.</th><th>Obs.</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody id="lev-filtros-tbody"></tbody>
