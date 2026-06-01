@@ -574,7 +574,6 @@ async function saveNewVisit() {
 
   // Validations (*)
   if (!cliente) return toast('El campo Cliente es obligatorio', 'err');
-  if (!hSalida) return toast('La Hora de Salida es obligatoria', 'err');
   if (!dir) return toast('El campo Dirección es obligatorio', 'err');
   if (!contacto) return toast('El Contacto es obligatorio', 'err');
   if (!cargo) return toast('El Cargo es obligatorio', 'err');
