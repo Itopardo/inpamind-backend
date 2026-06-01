@@ -319,6 +319,7 @@ function initTabs() {
     { icon: 'add-circle', label: 'Nueva', screen: 's-nueva' },
     { icon: 'document-text', label: 'Levant.', screen: 's-levantamiento' },
     { icon: 'list', label: 'Historial', screen: 's-hist' }
+    { icon: 'people', label: 'Directorio', screen: 's-contactos' }
   ];
   const adminTabs = [
     { icon: 'home', label: 'Inicio', screen: 's-home' },
