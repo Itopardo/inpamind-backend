@@ -369,7 +369,6 @@ async function initNewForm() {
   document.getElementById('n-hora-ingreso').value = timeStr;
   
   document.getElementById('n-cliente').value = '';
-  document.getElementById('n-hora-salida').value = '';
   document.getElementById('n-dir').value = '';
   document.getElementById('n-contacto').value = '';
   document.getElementById('n-cargo').value = '';
