@@ -326,7 +326,7 @@ function initTabs() {
     { icon: 'shield-checkmark', label: 'Admin', screen: 's-admin' }
   ];
   const tabs = currentUser?.role === 'admin' ? adminTabs : vendedorTabs;
-  const ids = ['tabBar', 'tabBar2', 'tabBar3', 'tabBar4', 'tabBar5'];
+  const ids = ['tabBar', 'tabBar2', 'tabBar3', 'tabBar4', 'tabBar5', 'tabBar6'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -335,7 +335,7 @@ function initTabs() {
 }
 
 function switchTab(i) {
-  const vendedorSc = ['s-home', 's-nueva', 's-levantamiento', 's-hist'];
+  const vendedorSc = ['s-home', 's-nueva', 's-levantamiento', 's-hist', 's-contactos'];
   const adminSc = ['s-home', 's-hist', 's-admin'];
   const screens = currentUser?.role === 'admin' ? adminSc : vendedorSc;
   if (i >= screens.length) return;
@@ -347,6 +347,7 @@ function switchTab(i) {
   if (screens[i] === 's-hist') renderHistory();
   if (screens[i] === 's-nueva') initNewForm();
   if (screens[i] === 's-levantamiento') lev_init();
+  if (screens[i] === 's-contactos') renderDirectorio();
   if (screens[i] === 's-home') {
     if (currentUser?.role === 'admin') loadAdminHomeDashboard();
     else loadVendedorStats();
@@ -1164,6 +1165,57 @@ function lev_asignarVisita() {
   if (el) el.value = siguiente;
   if (disp) disp.textContent = String(siguiente).padStart(3, '0');
   return siguiente;
+}
+
+// ─── Directorio de Contactos ─────────────────────────────────
+async function renderDirectorio() {
+  const el = document.getElementById('dir-list');
+  if (!el) return;
+  el.innerHTML = '<div class="empty"><div class="spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto"></div></div>';
+  try {
+    const data = await api(currentUser?.role === 'admin' ? '/api/admin/visits' : '/api/visits');
+    const visits = data.visits || [];
+    const map = {};
+    visits.forEach(v => {
+      if (!v.cliente || !v.contacto) return;
+      const k = v.cliente.trim();
+      if (!map[k]) map[k] = {};
+      const ck = v.contacto.toLowerCase().trim();
+      if (!map[k][ck]) map[k][ck] = { nombre:v.contacto, cargo:v.cargo||'', telefono:v.telefono||'', mail:v.mail||'' };
+    });
+    const cols = ['#1565a0','#2e7d32','#6a1b9a','#bf360c','#00695c','#4527a0','#0277bd','#ad1457'];
+    const col = n => cols[n.charCodeAt(0)%cols.length];
+    const ini = n => n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    const clients = Object.keys(map).sort((a,b)=>a.localeCompare(b));
+    if (!clients.length) { el.innerHTML='<div class="empty"><ion-icon name="people-outline"></ion-icon><p>Sin contactos</p></div>'; return; }
+    el.innerHTML = clients.map(c => {
+      const cs = Object.values(map[c]).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+      return '<div class="dir-group">'
+        +'<div class="dir-group-hdr"><span class="dir-client-name">'+esc(c)+'</span><span class="dir-count">'+cs.length+' contacto'+(cs.length!==1?'s':'')+'</span></div>'
+        +cs.map(x=>'<div class="dir-card">'
+          +'<div class="dir-avatar" style="background:'+col(x.nombre)+'">'+ini(x.nombre)+'</div>'
+          +'<div class="dir-info"><div class="dir-name">'+esc(x.nombre)+'</div>'+(x.cargo?'<div class="dir-cargo">'+esc(x.cargo)+'</div>':'')+'</div>'
+          +'<div class="dir-actions">'
+          +(x.telefono?'<a href="tel:'+esc(x.telefono)+'" class="dir-btn"><ion-icon name="call-outline"></ion-icon></a>':'<div class="dir-btn disabled"><ion-icon name="call-outline"></ion-icon></div>')
+          +(x.mail?'<a href="mailto:'+esc(x.mail)+'" class="dir-btn"><ion-icon name="mail-outline"></ion-icon></a>':'<div class="dir-btn disabled"><ion-icon name="mail-outline"></ion-icon></div>')
+          +'</div></div>').join('')+'</div>';
+    }).join('');
+  } catch(e) { const el2=document.getElementById('dir-list'); if(el2) el2.innerHTML='<div class="empty"><p>Error al cargar</p></div>'; }
+}
+
+function filtrarDirectorio() {
+  const q=(document.getElementById('dir-search')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('.dir-group').forEach(g=>{
+    const cli=g.querySelector('.dir-client-name')?.textContent.toLowerCase()||'';
+    let n=0;
+    g.querySelectorAll('.dir-card').forEach(card=>{
+      const nm=card.querySelector('.dir-name')?.textContent.toLowerCase()||'';
+      const cr=card.querySelector('.dir-cargo')?.textContent.toLowerCase()||'';
+      const ok=!q||cli.includes(q)||nm.includes(q)||cr.includes(q);
+      card.style.display=ok?'':'none'; if(ok)n++;
+    });
+    g.style.display=n>0?'':'none';
+  });
 }
 
 function lev_init() {
