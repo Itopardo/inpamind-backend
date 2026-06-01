@@ -568,7 +568,6 @@ function removeFoto(type) {
 async function saveNewVisit() {
   const cliente = document.getElementById('n-cliente').value.trim();
   const dir = document.getElementById('n-dir').value.trim();
-  const hSalida = document.getElementById('n-hora-salida').value.trim();
   const contacto = document.getElementById('n-contacto').value.trim();
   const cargo = document.getElementById('n-cargo').value.trim();
 
@@ -586,7 +585,6 @@ async function saveNewVisit() {
     const fd = new FormData();
     fd.append('fecha', document.getElementById('n-fecha').value);
     fd.append('hora', document.getElementById('n-hora-ingreso').value);
-    fd.append('hora_salida', hSalida);
     fd.append('cliente', cliente);
     fd.append('direccion', dir);
     fd.append('contacto', contacto);
@@ -763,7 +761,6 @@ async function showDetail(id) {
       ${v.seller_name ? `<div class="det-item"><ion-icon name="person"></ion-icon><div><div class="lbl2">Vendedor</div><div class="val">${esc(v.seller_name)}</div></div></div>` : ''}
       <div class="det-item"><ion-icon name="calendar-outline"></ion-icon><div><div class="lbl2">Fecha</div><div class="val">${fmtDate(v.fecha)}</div></div></div>
       <div class="det-item"><ion-icon name="time-outline"></ion-icon><div><div class="lbl2">Hora Ingreso</div><div class="val">${esc(v.hora || '—')}</div></div></div>
-      <div class="det-item"><ion-icon name="time"></ion-icon><div><div class="lbl2">Hora Salida</div><div class="val">${esc(v.hora_salida || '—')}</div></div></div>
       <div class="det-item"><ion-icon name="location-outline"></ion-icon><div><div class="lbl2">Dirección</div><div class="val">${esc(v.direccion || '—')}</div></div></div>
       <div class="det-item"><ion-icon name="person-outline"></ion-icon><div><div class="lbl2">Contacto</div><div class="val">${esc(v.contacto || '—')}</div></div></div>
       ${v.cargo ? `<div class="det-item"><ion-icon name="briefcase-outline"></ion-icon><div><div class="lbl2">Cargo</div><div class="val">${esc(v.cargo)}</div></div></div>` : ''}
@@ -859,7 +856,6 @@ async function saveEdit(id) {
     const fd = new FormData();
     fd.append('fecha', document.getElementById('e-fecha').value);
     fd.append('hora', document.getElementById('e-hora-ingreso').value);
-    fd.append('hora_salida', document.getElementById('e-hora-salida').value.trim());
     fd.append('cliente', cliente);
     fd.append('direccion', dir);
     fd.append('contacto', document.getElementById('e-contacto').value.trim());
